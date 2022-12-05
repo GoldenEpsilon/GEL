@@ -1,0 +1,6 @@
+var x = "This is a Test string."
+print(x);
+int i = 1 + 2;
+print(i);
+print(regex("t.*", "test"))
+print(2**2**3);

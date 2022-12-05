@@ -1,0 +1,43 @@
+
+print("Testing equations...");
+
+int i = 1 + 2 * 3;
+print(i == 7);
+int i1 = 2 * 3 + 1;
+print(i1 == 7);
+int i2 = i + 1 * 5 - 2;
+print(i2 == 10);
+int i3 = i + 1 * 5 - 2 / (7 > 1);
+print(i3 == 10);
+
+int test1 = 700 / 2059;
+print(test1 == 0);
+int x = 1;
+int y = 89 * (7)**2 + 4 * (x+2)**2;
+print(y == 4397);
+int z = 2**3**4;
+print(z == 4096);
+
+int t = 5 + 2 * 2 > 4
+print(t == 1);
+int test = 4 * 2**2 + 4 * 5
+print(test == 36);
+int test2 = 1 + 2 * 3 + 5 * 2**2 + 6 * 7
+print(test2 == 69);
+
+if(i == 7 && i1 == 7 && i2 == 10 && i3 == 10 && test1 == 0 && y == 4397 && z == 4096 && t == 1 && test == 36 && test2 == 69){
+	print("All Tests Passed!");
+}else{
+	print("One of the tests failed! Check the one that printed a 0.");
+}
+
+if true:
+	print("indentation level 1")
+	if true:
+		print("indentation level 2")
+
+if 1 == 1:
+	print("oh god why does this work");
+else:
+	print("uhh you shouldn't see this one");
+	

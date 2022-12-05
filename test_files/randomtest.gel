@@ -1,0 +1,27 @@
+fn button_pressed(index, button){
+}
+
+
+var canspec = 1;
+var maxhealth = 1;
+var lost_health = 1;
+var my_health = 1;
+var index = 1;
+
+if(canspec){
+  if button_pressed(index, "spec"){
+    // spawn projectile here
+    maxhealth -= 1;
+    if my_health >= maxhealth { my_health -= 1 }
+    lost_health += 1;
+  }
+}
+
+// put this in some level start function
+  maxhealth += lost_health;
+  my_health  += lost_health;
+  lost_health = 0;
+  
+print(maxhealth)
+print(lost_health)
+print(my_health)
