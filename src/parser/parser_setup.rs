@@ -1,14 +1,14 @@
 use std::env;
 use std::fs;
 use crate::datatypes::TokenAction;
+use crate::datatypes::Opcode;
 use crate::parser::linearize_ast::linearize;
+use crate::parser::parser::parser;
 use crate::scanner::scanner::scanner;
 use crate::grammar_generator::grammar_generator;
-use crate::parser::parser::parser;
 use crate::optimizers::ast_optimizer::optimize_ast;
-use crate::interpreter::interpreter::interpret_opcodes;
 
-pub fn startup() {
+pub fn compile() -> Vec<Opcode> {
     let args: Vec<String> = env::args().collect();
 	
 	let filename = &args[1];
@@ -16,13 +16,15 @@ pub fn startup() {
 	let input = fs::read_to_string(filename)
         .expect("Something went wrong reading the file");
 	
+	//FUNCDEF is above COMMENT because otherwise #define would count as a comment
 	let token_list = vec![
+		("FUNCDEF",    r"#define|function|fn", TokenAction::Identity),
 		("COMMENT",    r"(//.*)|(/\*(.|\n|\r)*?\*/)|(#.*)", TokenAction::Comment),
 		("STRING",    "(\".*?\")|('.*?')|(`.*?`)", TokenAction::Identity),
 		("IF",     r"if", TokenAction::Identity),
 		("ELSE",     r"else", TokenAction::Identity),
 		("FOR",     r"for", TokenAction::Identity),
-		("TYPE",    r"int|float|string|var|#define|function|fn", TokenAction::Identity),
+		("TYPE",    r"int|float|string|var", TokenAction::Identity),
 		("TRUE",    r"true|True|TRUE", TokenAction::Bool),
 		("FALSE",    r"false|False|FALSE", TokenAction::Bool),
 		("AND",    r"&&|and", TokenAction::Identity),
@@ -55,35 +57,40 @@ pub fn startup() {
 		("COMMA",    r",", TokenAction::Identity),
 		("ID",     r"[a-zA-Z_][a-zA-Z0-9_]*", TokenAction::Keywords),
 		("HNUM",    r"0x[0-9a-fA-F]+", TokenAction::HexNum),
-		("NUM",    r"-?([0-9]*\.[0-9]+)|[0-9]+", TokenAction::Identity),
+		("FLOAT",    r"-?([0-9]*\.[0-9]+)|[0-9]+", TokenAction::Identity),
+		("INT",    r"-?[0-9]+", TokenAction::Identity),
 		("NEWLINE",    r"\s*?\n", TokenAction::Newline),
 		("WHITESPACE",    r"\s*", TokenAction::Whitespace), //Creates INDENT and DEDENT for pythonic whitespace
 	];
 	//have rules for ID to let function results and stuff like x.y work
 	//Exponents are not right-associative
 	//Add foreach as an option for for loops
-	//Make parentheses optional for for loops
+	//Make function definitions work without {} (if there isn't an lbrace, break on next function definition)
 	let cfg = String::from("
 		Root::= Block
 		Block::= Stat Block | NONE
-		Stat::= LBRACE Block RBRACE | COLON PythonBlock | Decl Semi | Stat2 Semi | If | For
+		Stat::= LBRACE Block RBRACE | COLON PythonBlock | Def Semi | Stat2 Semi | If | For | FuncDef
 		PythonBlock::= INDENT Block DEDENT | Stat
 		Stat2::= ID Stat3
 		Stat3::= DOT Stat2 | AsgnOp | Func | NONE
 		Semi::= SEMI | NONE
-		Decl::=	TYPE ID Decl2
-		Decl2::= Set Expr | FuncDef | NONE
+		Def::=	TYPE Def2
+		Def2::=	Decl | FuncDef
+		Decl::=	ID Decl2
+		Decl2::= Set Expr | NONE
 		AsgnOp::= Set Expr | INCR | DECR
 		Set::= SET | SETADD | SETSUB | SETMUL | SETDIV
 		Func::= LPAREN Comma RPAREN
 		Comma::= Expr Comma | COMMA Expr Comma | NONE
-		FuncDef::= LPAREN DefComma RPAREN Block | Block
+		FuncDef::= FUNCDEF ID FuncDef2
+		FuncDef2::= LPAREN DefComma RPAREN Stat | Stat
 		DefComma::= Arg DefComma | COMMA Arg DefComma | NONE
 		Arg::= TYPE ID ArgDefault | ID ArgDefault
 		ArgDefault::= EQ Val | NONE
 		If::= IF Expr Stat Else
 		Else::=	ELSE Stat |	NONE
-		For::= FOR LPAREN Decl SEMI Expr SEMI Stat2 RPAREN Stat
+		For::= FOR For2
+		For2::= LPAREN TYPE Decl SEMI Expr SEMI Stat2 RPAREN Stat | TYPE Decl SEMI Expr SEMI Stat2 Stat
 		Expr::=	OpPrec5
 		OpPrec5::= OpPrec4 Op5
 		Op5::= AND OpPrec4 Op5 | OR OpPrec4 Op5 | NONE
@@ -97,7 +104,7 @@ pub fn startup() {
 		Op1::= EXP Unit Op1 | NONE
 		Unit::=	LPAREN Expr RPAREN TypeHint | Stat2 TypeHint | Val TypeHint
 		TypeHint::= LPAREN TYPE RPAREN | NONE
-		Val::= NUM | STRING
+		Val::= FLOAT | INT | STRING
 		");
 	let grammar = grammar_generator(cfg);
 	//println!("{:#?}", grammar);
@@ -113,5 +120,5 @@ pub fn startup() {
 	//println!("{:#?}", opcodes);
 	//Make control flow graph?
 	//let optimized_opcodes = optimize_opcodes(opcodes);
-	interpret_opcodes(opcodes);
+	return opcodes;
 }

@@ -1,4 +1,6 @@
 use std::fmt;
+use std::collections::HashMap;
+use rust_decimal::prelude::*;
 
 #[derive(Clone, Copy)]
 pub enum TokenAction {
@@ -45,13 +47,16 @@ pub struct Opcode {
 #[derive(Hash)]
 pub enum Data {
     Null,
+    Decimal(Decimal),
     Int(i32),
     String(String),
+    Color(Decimal, Decimal, Decimal, Decimal),
     Register(i32),
     Label(i32),
     Variable(String),
     Type(String),
     Comma(Box<Data>, Box<Data>),
+    //Object(), //make it a reference to the list of objects
 }
 impl fmt::Display for Data {
     // This trait requires `fmt` with this exact signature.
@@ -65,6 +70,12 @@ impl fmt::Display for Data {
 				write!(f, "NULL")
 			}
 			Data::Int(data) => {
+				write!(f, "{}", data)
+			}
+			Data::Color(data1, data2, data3, data4) => {
+				write!(f, "Color({}, {}, {}, {})", data1, data2, data3, data4)
+			}
+			Data::Decimal(data) => {
 				write!(f, "{}", data)
 			}
 			Data::String(data) => {
@@ -85,6 +96,29 @@ impl fmt::Display for Data {
 			Data::Comma(data1, data2) => {
 				write!(f, "{}, {}", data1.to_string(), data2.to_string())
 			}
+			/*Data::Object(data) => {
+				write!(f, "{:?}", data.name)
+			}*/
 		}
+    }
+}
+
+#[derive(Debug)]
+#[derive(Clone)]
+#[derive(PartialEq)]
+#[derive(Eq)]
+pub struct Object {
+	pub id: usize,
+	pub name: String,
+	pub object_type: String,
+	pub data: HashMap<String, Data>
+}
+impl std::hash::Hash for Object {
+	fn hash<H>(&self, state: &mut H)
+    where
+        H: std::hash::Hasher,
+    {
+        state.write_usize(self.id);
+        state.finish();
     }
 }

@@ -1,0 +1,9 @@
+#define init():
+	trace(1);
+
+
+fn draw {
+	clear_background(c_dgray);
+	draw_text("Hello World!", 20.0, 20.0, 30.0, c_red);
+}
+

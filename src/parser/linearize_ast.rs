@@ -1,6 +1,7 @@
 use crate::datatypes::ASTNode;
 use crate::datatypes::Opcode;
 use crate::datatypes::Data;
+use rust_decimal::prelude::*;
 
 pub fn linearize(ast: &mut ASTNode, curr_reg: &mut i32) -> Vec<Opcode> {
 	let mut ret_val: Vec<Opcode> = vec![];
@@ -11,9 +12,17 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut i32) -> Vec<Opcode> {
 			}
 		}
 		"For" => {
-			
-			//Make sure the assignment isn't a function
 			ret_val.append(&mut linearize(&mut ast.children[2], curr_reg));
+		}
+		"For2" => {
+			let paren;
+			if ast.children.len() == 8 {
+				paren = 1;
+			}else{
+				paren = 0;
+			}
+			
+			ret_val.append(&mut linearize(&mut ast.children[1 - paren], curr_reg));
 			
 			//label to goto
 			ret_val.push(Opcode{instruction: "FOR_LABEL".to_string(), data: Data::Label(*curr_reg), data2: Data::Null, register: 0, line: 0});
@@ -21,14 +30,14 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut i32) -> Vec<Opcode> {
 			*curr_reg += 1;
 			
 			//Block
-			ret_val.append(&mut linearize(&mut ast.children[8], curr_reg));
+			ret_val.append(&mut linearize(&mut ast.children[7 - paren * 2], curr_reg));
 			
 			//Loop Check
-			ret_val.append(&mut linearize(&mut ast.children[4], curr_reg));
+			ret_val.append(&mut linearize(&mut ast.children[3 - paren], curr_reg));
 			let reg = Data::Register(ret_val.last().unwrap().register);
 			
 			//Modify iterator
-			ret_val.append(&mut linearize(&mut ast.children[6], curr_reg));
+			ret_val.append(&mut linearize(&mut ast.children[5 - paren], curr_reg));
 			
 			//goto label at end of loop if true
 			ret_val.push(Opcode{instruction: "FOR_GOTO".to_string(), data: reg, data2: Data::Label(label_reg), register: 0, line: 0});
@@ -122,9 +131,33 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut i32) -> Vec<Opcode> {
 			}
 		}
 		"FuncDef" => {
-			ret_val.append(&mut linearize(&mut ast.children[1], curr_reg));
-			ret_val.push(Opcode{instruction: "FUNCDEF".to_string(), data: Data::Null, data2: Data::Register(ret_val[ret_val.len() - 1].register), register: *curr_reg, line: 0});
-			*curr_reg += 1;
+			if ast.children.len() == 3 {
+				ret_val.push(Opcode{instruction: "FUNC_DEF".to_string(), data: Data::Variable(ast.children[1].data.as_ref().unwrap().1.to_owned()), data2: Data::Null, register: *curr_reg, line: 0});
+				*curr_reg += 1;
+				ret_val.append(&mut linearize(&mut ast.children[2], curr_reg));
+				ret_val.push(Opcode{instruction: "END_FUNC".to_string(), data: Data::Variable(ast.children[1].data.as_ref().unwrap().1.to_owned()), data2: Data::Null, register: *curr_reg, line: 0});
+				*curr_reg += 1;
+			} else {
+				ret_val.append(&mut linearize(&mut ast.children[3], curr_reg));
+				ret_val.push(Opcode{instruction: "FUNC_DEF".to_string(), data: Data::Variable(ast.children[2].data.as_ref().unwrap().1.to_owned()), data2: Data::Register(ret_val[ret_val.len() - 1].register), register: *curr_reg, line: 0});
+				*curr_reg += 1;
+				ret_val.append(&mut linearize(&mut ast.children[5], curr_reg));
+				ret_val.push(Opcode{instruction: "END_FUNC".to_string(), data: Data::Variable(ast.children[2].data.as_ref().unwrap().1.to_owned()), data2: Data::Null, register: *curr_reg, line: 0});
+				*curr_reg += 1;
+			}
+		}
+		"FuncDef2" => {
+			if ast.children.len() == 4 {
+				let mut child = linearize(&mut ast.children[1], curr_reg);
+				ret_val.push(Opcode{instruction: "FUNC_ARGS".to_string(), data: Data::Int(child.len() as i32), data2: Data::Null, register: *curr_reg, line: 0});
+				*curr_reg += 1;
+				ret_val.append(&mut child);
+				ret_val.append(&mut linearize(&mut ast.children[3], curr_reg));
+			} else {
+				ret_val.push(Opcode{instruction: "FUNC_ARGS".to_string(), data: Data::Null, data2: Data::Null, register: *curr_reg, line: 0});
+				*curr_reg += 1;
+				ret_val.append(&mut linearize(&mut ast.children[0], curr_reg));
+			}
 		}
 		"DefComma" => {
 			if ast.children.len() > 1 {
@@ -143,11 +176,31 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut i32) -> Vec<Opcode> {
 				*curr_reg += 1;
 			}
 		}
+		"Arg" => {
+			if ast.children.len() == 3 {
+				ret_val.push(Opcode{instruction: "ARG".to_string(), data: Data::Variable(ast.children[1].data.as_ref().unwrap().1.to_owned()), data2: Data::Type(ast.children[0].data.as_ref().unwrap().1.to_owned()), register: 0, line: 0});
+				ret_val.append(&mut linearize(&mut ast.children[2], curr_reg));
+			}else{
+				ret_val.push(Opcode{instruction: "ARG".to_string(), data: Data::Variable(ast.children[0].data.as_ref().unwrap().1.to_owned()), data2: Data::Type("var".to_string()), register: 0, line: 0});
+				ret_val.append(&mut linearize(&mut ast.children[1], curr_reg));
+			}
+		}
+		"ArgDefault" => {
+			if ast.children.len() == 2 {
+				ret_val.append(&mut linearize(&mut ast.children[1], curr_reg));
+			}
+		}
 		"ID" => {
 			ret_val.push(Opcode{instruction: "ID".to_string(), data: Data::Variable(ast.data.as_ref().unwrap().1.to_owned()), data2: Data::Null, register: *curr_reg, line: 0});
 			*curr_reg += 1;
 		}
-		"NUM" => {
+		"FLOAT" => {
+			if !Decimal::from_str(ast.data.as_ref().unwrap().1.as_str()).is_err() {
+				ret_val.push(Opcode{instruction: "Value".to_string(), data: Data::Decimal(Decimal::from_str(ast.data.as_ref().unwrap().1.as_str()).unwrap()), data2: Data::Null, register: *curr_reg, line: 0});
+				*curr_reg += 1;
+			}
+		}
+		"INT" => {
 			ret_val.push(Opcode{instruction: "Value".to_string(), data: Data::Int(ast.data.as_ref().unwrap().1.parse::<i32>().unwrap()), data2: Data::Null, register: *curr_reg, line: 0});
 			*curr_reg += 1;
 		}
@@ -205,13 +258,24 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut i32) -> Vec<Opcode> {
 				//maybe do type hint stuff
 			}
 		}
+		"Def" => {
+			let mut child = linearize(&mut ast.children[1], curr_reg);
+			if child.len() > 0 && child[0].instruction == "Declare".to_string() {
+				child[0].data = Data::Type(ast.children[0].data.as_ref().unwrap().1.to_owned());
+				ret_val.append(&mut child);
+			}
+		}
+		"Def2" => {
+			let mut child = linearize(&mut ast.children[0], curr_reg);
+			ret_val.append(&mut child);
+		}
 		"Decl" => {
-			let mut child2 = linearize(&mut ast.children[2], curr_reg);
-			ret_val.push(Opcode{instruction: "Declare".to_string(), data: Data::Type(ast.children[0].data.as_ref().unwrap().1.to_owned()), data2: Data::Variable(ast.children[1].data.as_ref().unwrap().1.to_owned()), register: 0, line: ast.line});
-			if child2.len() > 0{
-				let reg = Data::Register(child2[child2.len() - 1].register);
-				ret_val.append(&mut child2);
-				ret_val.push(Opcode{instruction: "Set".to_string(), data: Data::Variable(ast.children[1].data.as_ref().unwrap().1.to_owned()), data2: reg, register: *curr_reg, line: ast.line});
+			let mut child = linearize(&mut ast.children[1], curr_reg);
+			ret_val.push(Opcode{instruction: "Declare".to_string(), data: Data::Null, data2: Data::Variable(ast.children[0].data.as_ref().unwrap().1.to_owned()), register: 0, line: ast.line});
+			if child.len() > 0{
+				let reg = Data::Register(child[child.len() - 1].register);
+				ret_val.append(&mut child);
+				ret_val.push(Opcode{instruction: "Set".to_string(), data: Data::Variable(ast.children[0].data.as_ref().unwrap().1.to_owned()), data2: reg, register: *curr_reg, line: ast.line});
 				*curr_reg += 1;
 			}
 		}

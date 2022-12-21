@@ -1,6 +1,7 @@
 
 use std::collections::HashMap;
 use crate::datatypes::Data;
+use crate::datatypes::Opcode;
 
 pub fn get_value(data: &Data, registers: &HashMap<Data, Data>, variables: &HashMap<Data, (Data, Data)>) -> Data{
 	match data {
@@ -38,6 +39,32 @@ pub fn unwrap_function_inputs(data: &Data, registers: &HashMap<Data, Data>, vari
 		}
 		val => {
 			ret_val.push(val.clone());
+		}
+	}
+	return ret_val;
+}
+
+pub fn unwrap_function_definition(position: usize, opcodes: &Vec<Opcode>) -> Vec<(Data, Data)> {
+	let mut ret_val = vec![];
+	let mut counter = 1;
+	for op in &opcodes[position..] {
+		match op.instruction.as_str() {
+			"FUNC_ARGS" => {
+				match op.data {
+					Data::Int(len) => {
+						counter += len;
+					}
+					_ => {}
+				}
+			}
+			"ARG" => {
+				ret_val.push((op.data2.to_owned(), op.data.to_owned()));
+			}
+			_ => {}
+		}
+		counter -= 1;
+		if counter <= 0 {
+			break;
 		}
 	}
 	return ret_val;
