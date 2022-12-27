@@ -62,7 +62,7 @@ pub fn compile() -> Vec<Opcode> {
 		("NEWLINE",    r"\s*?\n", TokenAction::Newline),
 		("WHITESPACE",    r"\s*", TokenAction::Whitespace), //Creates INDENT and DEDENT for pythonic whitespace
 	];
-	//have rules for ID to let function results and stuff like x.y work
+	//have rules for ID to let function results and stuff like x.y work (needs to attach onto what's currently ID)
 	//Exponents are not right-associative
 	//Add foreach as an option for for loops
 	//Make function definitions work without {} (if there isn't an lbrace, break on next function definition)
@@ -120,5 +120,6 @@ pub fn compile() -> Vec<Opcode> {
 	//println!("{:#?}", opcodes);
 	//Make control flow graph?
 	//let optimized_opcodes = optimize_opcodes(opcodes);
+
 	return opcodes;
 }

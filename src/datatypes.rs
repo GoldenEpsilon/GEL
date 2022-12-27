@@ -18,7 +18,8 @@ pub enum TokenAction {
 pub struct GrammarToken {
 	pub is_terminal: bool,
 	pub value: String,
-	pub lookahead: Vec<String>
+	pub lookahead: Vec<String>,
+	pub is_subrule: bool
 }
 
 #[derive(Debug)]
