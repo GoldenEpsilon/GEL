@@ -5,13 +5,13 @@ use crate::datatypes::ASTNode;
 
 //A Top-Down Parser
 pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, Vec<Vec<GrammarToken>>>) -> ASTNode {
-	let none = GrammarToken{is_terminal: true, value: String::from("NONE"), lookahead: vec!["NONE".to_string()]};
-	let end = GrammarToken{is_terminal: true, value: String::from("END"), lookahead: vec!["".to_string()]};
+	let none = GrammarToken{is_terminal: true, value: String::from("NONE"), lookahead: vec!["NONE".to_string()], is_subrule: false};
+	let end = GrammarToken{is_terminal: true, value: String::from("END"), lookahead: vec!["".to_string()], is_subrule: false};
 	let endtoken = (String::from("END"), String::from(""), 0);
 	let mut ast = ASTNode{rule: "Root".to_string(), data: None, children: vec![], line: 0};
 	let mut ast_focus = vec![];
 	let mut ast_stack = vec![];
-	let mut focus = &GrammarToken{is_terminal: false, value: String::from("Root"), lookahead: vec!["END".to_string()]};
+	let mut focus = &GrammarToken{is_terminal: false, value: String::from("Root"), lookahead: vec!["END".to_string()], is_subrule: false};
 	let mut stack = vec![&end];
 	let mut tokens = token_list.iter();
 	//Check for an empty program
@@ -24,7 +24,7 @@ pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, V
 	loop {
 		if to_match.0 == end.value && focus.value == none.value {
 			//println!("Parsing passed!");
-			return ast;
+			break;
 		} else if focus.value == none.value {
 			if stack.len() == 0 {
 				panic!("Whoops, parser error!\nRan out of stuff to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2);
@@ -77,7 +77,11 @@ pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, V
 			}
 			for r in rule_out.rev() {
 				stack.push(r);
-				find_ast_node(&ast_focus, &mut ast).children.push(ASTNode{rule: r.value.to_owned(), data: None, children: vec![], line: to_match.2});
+				if !r.is_subrule {
+					find_ast_node(&ast_focus, &mut ast).children.push(ASTNode{rule: r.value.to_owned(), data: None, children: vec![], line: to_match.2});
+				} else {
+					find_ast_node(&ast_focus, &mut ast).children.push(ASTNode{rule: "SUBRULE".to_owned(), data: None, children: vec![], line: to_match.2});
+				}
 			}
 			find_ast_node(&ast_focus, &mut ast).children.reverse();
 			for i in (0..find_ast_node(&ast_focus, &mut ast).children.len()).rev() {
@@ -117,6 +121,31 @@ pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, V
 			panic!("Whoops, parser error!\nI was thinking I would find a {:#?}, but I found a {:#?}, which was {:#?} on line {:#?}", focus.value, to_match.0, to_match.1, to_match.2);
 			//return ast;
 		}
+	}
+
+	//Remove subrules to clean up the AST
+	clean_ast(&mut ast);
+
+	return ast;
+}
+
+fn clean_ast(ast: &mut ASTNode) {
+	let mut indices = vec![];
+	for (index, node) in &mut ast.children.iter_mut().enumerate() {
+		if node.rule != "SUBRULE".to_owned() {
+			clean_ast(node);
+		} else {
+			indices.push(index);
+		}
+	}
+	let mut offset = 0;
+	for index in &indices {
+		let len = ast.children.len();
+		ast.children.splice((index+offset)..(index+offset+1), ast.children[*index].children.to_owned());
+		offset += len - 1;
+	}
+	if indices.len() > 0 {
+		clean_ast(ast);
 	}
 }
 
