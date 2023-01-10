@@ -32,7 +32,7 @@
 
 use macroquad::prelude::*;
 use crate::parser::parser_setup::compile;
-use crate::interpreter::interpreter::interpret_opcodes;
+use crate::interpreter::interpreter::interpret_program;
 
 mod datatypes;
 mod parser;
@@ -43,8 +43,11 @@ mod grammar_generator;
 
 #[macroquad::main("BasicShapes")]
 async fn main() {
-	let opcodes = compile();
-	interpret_opcodes(&opcodes, "init");
+	println!("0");
+	let mut program = compile();
+	println!("1");
+	interpret_program(&mut program, "");
+	interpret_program(&mut program, "init");
     loop {
         /*clear_background(RED);
 
@@ -53,8 +56,8 @@ async fn main() {
         draw_circle(screen_width() - 30.0, screen_height() - 30.0, 15.0, YELLOW);
 
         draw_text("IT WORKS!", 20.0, 20.0, 30.0, DARKGRAY);*/
-	    interpret_opcodes(&opcodes, "step");
-	    interpret_opcodes(&opcodes, "draw");
+	    interpret_program(&mut program, "step");
+	    interpret_program(&mut program, "draw");
 
         next_frame().await
     }

@@ -2,17 +2,12 @@ use regex::Regex;
 use std::collections::HashMap;
 use crate::datatypes::GrammarToken;
 
-//A Converter from an input CFG to what the Top-Down Parser needs,
-//currently requires a predictive CFG
-	//ideas for implementation:
-		//check lookahead groups to see if two subrules give some of the same tokens on a lookahead group
-			//if so, mark it for later
-			//if a subrule has a subset of the tokens of another subrule, split the rule and merge the subrules
-			//if a rule is marked and no rules were split in a pass, error.
-			//otherwise, if a rule is marked rerun the backtrack fixer
-			//otherwise, the grammar SHOULD be fixed
-			//Print out the issues the grammar had so that the dev can fix it
-		//If a grammar is not predictive, fix it while keeping associativity
+//A Converter from an input CFG to what the Top-Down Parser needs.
+//Predictive grammar is not needed, as the generator handles that case.
+//TODO:
+//		Make check and fix for left recursion (similar to how it fixes non-predictive grammars)
+//		Make optional tokens/linked optional tokens (signified with (x) beforehand, with x being a tag)
+//			for example, Test::= (parens)LPAREN ID (parens)RPAREN (semicolon)SEMI
 //	There are two special values, being grammar rule Root and the the token type END.
 //	END is used for the end of the program, for if you want to end parsing early.
 //	Root is always the highest-level set of rules. (the lowest priority operators)
@@ -99,6 +94,15 @@ pub fn grammar_generator(inputstr: String) -> HashMap<String, Vec<Vec<GrammarTok
 				rule.remove(rule_to_fix.3);
 				grammar.remove(&rule_to_fix.1.to_string());
 				grammar.insert(rule_to_fix.1.to_string(), rule);
+			}else{
+				//if they aren't equal that means that there are nonterminals involved here, making things trickier.
+				//Problem: what to do with:
+				// A: B C | D C
+				// B: C | b
+				// C: a c
+				// D: a d
+				// (problem being that you have to go through B in code, but can't let it diverge from going to C)
+				panic!("This grammar is not predictive! Take another look at {} and its descendants", rule_to_fix.1);
 			}
 		} else {
 			break;

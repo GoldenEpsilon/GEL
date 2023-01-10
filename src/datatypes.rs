@@ -37,7 +37,7 @@ pub struct Opcode {
 	pub instruction: String,//might want to replace this with something more useful and/or faster, like a direct function reference
 	pub data: Data,
 	pub data2: Data,
-	pub register: i32,
+	pub register: u32,
 	pub line: i32,
 }
 
@@ -52,8 +52,8 @@ pub enum Data {
     Int(i32),
     String(String),
     Color(Decimal, Decimal, Decimal, Decimal),
-    Register(i32),
-    Label(i32),
+    Register(u32),
+    Label(usize),
     Variable(String),
     Type(String),
     Comma(Box<Data>, Box<Data>),
@@ -109,7 +109,7 @@ impl fmt::Display for Data {
 #[derive(PartialEq)]
 #[derive(Eq)]
 pub struct Object {
-	pub id: usize,
+	pub id: u32,
 	pub name: String,
 	pub object_type: String,
 	pub data: HashMap<String, Data>
@@ -119,7 +119,37 @@ impl std::hash::Hash for Object {
     where
         H: std::hash::Hasher,
     {
-        state.write_usize(self.id);
+        state.write_u32(self.id);
         state.finish();
     }
+}
+impl Object {
+	pub fn new(object_type: String, id: u32) -> Object {
+		return Object{id, name: object_type.to_owned(), object_type, data: HashMap::new()};
+	}
+}
+
+#[derive(Debug)]
+pub struct FuncData {
+	pub return_type: Data,
+	pub input_types: Vec<Data>,
+	pub optional_types: HashMap<String, Data>,
+}
+
+#[derive(Debug)]
+pub struct Program {
+	pub functions: HashMap<String, (FuncData, Vec<Opcode>)>,
+	pub labels: Vec<usize>,
+	pub objects: HashMap<String, Vec<Object>>,
+	pub id_index: u32
+}
+
+impl Program {
+	pub fn new() -> Program {
+		return Program{functions: HashMap::new(), labels: vec![], objects: HashMap::from([("Program".to_string(), vec![Object::new("Program".to_string(), 1)])]), id_index: 1};
+	}
+	pub fn new_object(&mut self, object_type: String) -> Object {
+		self.id_index += 1;
+		return Object::new(object_type, self.id_index);
+	}
 }

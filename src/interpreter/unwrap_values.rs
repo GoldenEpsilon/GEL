@@ -1,19 +1,19 @@
 
 use std::collections::HashMap;
 use crate::datatypes::Data;
-use crate::datatypes::Opcode;
+//use crate::datatypes::Opcode;
 
-pub fn get_value(data: &Data, registers: &HashMap<Data, Data>, variables: &HashMap<Data, (Data, Data)>) -> Data{
+pub fn get_value(data: &Data, registers: &HashMap<u32, Data>, variables: &HashMap<String, (Data, Data)>) -> Data{
 	match data {
-		Data::Register(_) => {
-			let reg = registers.get(&data);
+		Data::Register(true_data) => {
+			let reg = registers.get(&true_data);
 			if !reg.is_some() {
 				panic!("NONEXISTENT REGISTER ACCESS TRYING TO ACCESS {:?}", data);
 			}
 			return get_value(&reg.unwrap(), registers, variables);
 		}
-		Data::Variable(_) => {
-			let var = variables.get(&data);
+		Data::Variable(true_data) => {
+			let var = variables.get(true_data);
 			if !var.is_some() {
 				panic!("NONEXISTENT VARIABLE ACCESS TRYING TO ACCESS {:?}", data);
 			}
@@ -25,7 +25,7 @@ pub fn get_value(data: &Data, registers: &HashMap<Data, Data>, variables: &HashM
 	};
 }
 
-pub fn unwrap_function_inputs(data: &Data, registers: &HashMap<Data, Data>, variables: &HashMap<Data, (Data, Data)>) -> Vec<Data> {
+pub fn unwrap_function_inputs(data: &Data, registers: &HashMap<u32, Data>, variables: &HashMap<String, (Data, Data)>) -> Vec<Data> {
 	let mut ret_val = vec![];
 	match data {
 		Data::Comma(l, r) => {
@@ -44,6 +44,7 @@ pub fn unwrap_function_inputs(data: &Data, registers: &HashMap<Data, Data>, vari
 	return ret_val;
 }
 
+/*
 pub fn unwrap_function_definition(position: usize, opcodes: &Vec<Opcode>) -> Vec<(Data, Data)> {
 	let mut ret_val = vec![];
 	let mut counter = 1;
@@ -68,4 +69,4 @@ pub fn unwrap_function_definition(position: usize, opcodes: &Vec<Opcode>) -> Vec
 		}
 	}
 	return ret_val;
-}
+}*/

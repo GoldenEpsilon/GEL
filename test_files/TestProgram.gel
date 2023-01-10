@@ -1,9 +1,13 @@
-for(int i = 0; i </*test//*/ 10; i++){
+print("a");
+var x = 0;
+for(int i = 0; i < 10; i++){
+	print("a1");
 	print(i);
-	var x = 0;
-	if(i == 11){//test2
+	if(i == 10){//test2
 		x++;
 	}
+	if(true) x++
 	x++;
 }
 print(x);
+print("b");

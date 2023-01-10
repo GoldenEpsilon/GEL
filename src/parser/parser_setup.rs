@@ -1,20 +1,24 @@
 use std::env;
 use std::fs;
+use crate::datatypes::Program;
 use crate::datatypes::TokenAction;
-use crate::datatypes::Opcode;
-use crate::parser::linearize_ast::linearize;
+use crate::parser::linearize_ast::linearize_ast;
 use crate::parser::parser::parser;
 use crate::scanner::scanner::scanner;
 use crate::grammar_generator::grammar_generator;
 use crate::optimizers::ast_optimizer::optimize_ast;
 
-pub fn compile() -> Vec<Opcode> {
+pub fn compile() -> Program {
+	println!("0a");
     let args: Vec<String> = env::args().collect();
+	println!("0b");
 	
 	let filename = &args[1];
+	println!("0c");
 	
 	let input = fs::read_to_string(filename)
         .expect("Something went wrong reading the file");
+	println!("0d");
 	
 	//FUNCDEF is above COMMENT because otherwise #define would count as a comment
 	let token_list = vec![
@@ -27,6 +31,7 @@ pub fn compile() -> Vec<Opcode> {
 		("TYPE",    r"int|float|string|var", TokenAction::Identity),
 		("TRUE",    r"true|True|TRUE", TokenAction::Bool),
 		("FALSE",    r"false|False|FALSE", TokenAction::Bool),
+		("ARROW",    r"->", TokenAction::Identity),
 		("AND",    r"&&|and", TokenAction::Identity),
 		("OR",    r"\|\||or", TokenAction::Identity),
 		("EQ",    r"==", TokenAction::Identity),
@@ -57,40 +62,35 @@ pub fn compile() -> Vec<Opcode> {
 		("COMMA",    r",", TokenAction::Identity),
 		("ID",     r"[a-zA-Z_][a-zA-Z0-9_]*", TokenAction::Keywords),
 		("HNUM",    r"0x[0-9a-fA-F]+", TokenAction::HexNum),
-		("FLOAT",    r"-?([0-9]*\.[0-9]+)|[0-9]+", TokenAction::Identity),
+		("DECIMAL",    r"-?([0-9]*\.[0-9]+)", TokenAction::Identity),
 		("INT",    r"-?[0-9]+", TokenAction::Identity),
 		("NEWLINE",    r"\s*?\n", TokenAction::Newline),
 		("WHITESPACE",    r"\s*", TokenAction::Whitespace), //Creates INDENT and DEDENT for pythonic whitespace
 	];
-	//have rules for ID to let function results and stuff like x.y work (needs to attach onto what's currently ID)
 	//Exponents are not right-associative
 	//Add foreach as an option for for loops
 	//Make function definitions work without {} (if there isn't an lbrace, break on next function definition)
 	let cfg = String::from("
 		Root::= Block
 		Block::= Stat Block | NONE
-		Stat::= LBRACE Block RBRACE | COLON PythonBlock | Def Semi | Stat2 Semi | If | For | FuncDef
+		Stat::= LBRACE Block RBRACE | COLON PythonBlock | Def Semi | Stat2 Semi | If | For | FuncDef Semi
 		PythonBlock::= INDENT Block DEDENT | Stat
-		Stat2::= ID Stat3
-		Stat3::= DOT Stat2 | AsgnOp | Func | NONE
+		Stat2::= ID DOT Stat2 | ID AsgnOp | ID Func
 		Semi::= SEMI | NONE
-		Def::=	TYPE Def2
-		Def2::=	Decl | FuncDef
-		Decl::=	ID Decl2
-		Decl2::= Set Expr | NONE
-		AsgnOp::= Set Expr | INCR | DECR
+		Def::=	TYPE ID Set Expr | TYPE ID
+		AsgnOp::= Set Expr | INCR | DECR | NONE
 		Set::= SET | SETADD | SETSUB | SETMUL | SETDIV
 		Func::= LPAREN Comma RPAREN
 		Comma::= Expr Comma | COMMA Expr Comma | NONE
-		FuncDef::= FUNCDEF ID FuncDef2
-		FuncDef2::= LPAREN DefComma RPAREN Stat | Stat
+		FuncDef::= FUNCDEF ID FuncDefArgs FuncDefType Stat
+		FuncDefArgs::= LPAREN DefComma RPAREN | NONE
+		FuncDefType::= ARROW TYPE | NONE
 		DefComma::= Arg DefComma | COMMA Arg DefComma | NONE
 		Arg::= TYPE ID ArgDefault | ID ArgDefault
 		ArgDefault::= EQ Val | NONE
 		If::= IF Expr Stat Else
 		Else::=	ELSE Stat |	NONE
-		For::= FOR For2
-		For2::= LPAREN TYPE Decl SEMI Expr SEMI Stat2 RPAREN Stat | TYPE Decl SEMI Expr SEMI Stat2 Stat
+		For::= FOR LPAREN Def SEMI Expr SEMI Stat2 RPAREN Stat
 		Expr::=	OpPrec5
 		OpPrec5::= OpPrec4 Op5
 		Op5::= AND OpPrec4 Op5 | OR OpPrec4 Op5 | NONE
@@ -104,22 +104,25 @@ pub fn compile() -> Vec<Opcode> {
 		Op1::= EXP Unit Op1 | NONE
 		Unit::=	LPAREN Expr RPAREN TypeHint | Stat2 TypeHint | Val TypeHint
 		TypeHint::= LPAREN TYPE RPAREN | NONE
-		Val::= FLOAT | INT | STRING
+		Val::= DECIMAL | INT | STRING
 		");
+	println!("0e");
 	let grammar = grammar_generator(cfg);
 	//println!("{:#?}", grammar);
+	println!("1");
 	let tokens = scanner(input, token_list);
 	let ast = parser(tokens, grammar);
+	println!("2");
 	//let mut parse_tree = parser(tokens, grammar);
 	//let ast = parse_tree_to_ast(&mut parse_tree, None);
 	//println!("{:#?}", ast);
 	let mut optimized_ast = optimize_ast(ast);
 	//let opcodes = linearize_ast(optimized_ast, linearize as fn(&mut ASTNode, &mut Vec<Opcode>));
-	let mut register = 1;
-	let opcodes = linearize(&mut optimized_ast, &mut register);
-	//println!("{:#?}", opcodes);
+	let program = linearize_ast(&mut optimized_ast);
+	println!("3");
+	println!("{:#?}", program);
 	//Make control flow graph?
 	//let optimized_opcodes = optimize_opcodes(opcodes);
 
-	return opcodes;
+	return program;
 }

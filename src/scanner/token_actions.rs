@@ -30,8 +30,8 @@ pub fn token_actions(token: (String, String, i32), action: TokenAction, line_cou
 		TokenAction::Keywords => ret_val.push(token),
 		TokenAction::Bool => 
 			match token.0.as_str() {
-				"TRUE" => ret_val.push(("NUM".to_string(), "1".to_string(), token.2)),
-				"FALSE" => ret_val.push(("NUM".to_string(), "0".to_string(), token.2)),
+				"TRUE" => ret_val.push(("INT".to_string(), "1".to_string(), token.2)),
+				"FALSE" => ret_val.push(("INT".to_string(), "0".to_string(), token.2)),
 				_ => {}
 			},
 		TokenAction::Comment => {},

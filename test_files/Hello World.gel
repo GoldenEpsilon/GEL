@@ -1,9 +1,13 @@
 #define init():
-	trace(1);
+	trace("a");
 
 
 fn draw {
 	clear_background(c_dgray);
-	draw_text("Hello World!", 20.0, 20.0, 30.0, c_red);
+	if(true)
+		draw_text("Hello World!", 20.0, 20.0, 30.0, c_red);
+	if(false)
+		draw_text("Goodbye World!", 20.0, 50.0, 30.0, c_red);
+	if(true)
+		draw_text("thing", 20.0, 80.0, 30.0, c_red);
 }
-
