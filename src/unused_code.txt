@@ -1,0 +1,56 @@
+
+
+/*fn parse_tree_to_ast(parse_tree: &mut ASTNode, passed_node: Option<ASTNode>) -> ASTNode{
+	match parse_tree.rule.as_str(){
+		"Expr" => {
+			if parse_tree.children.len() == 1 {
+				return parse_tree.clone();
+			}else{
+				let child0 = Some(parse_tree.children[0].clone());
+				return parse_tree_to_ast(&mut parse_tree.children[1], child0);
+			}
+		}
+		"OpPrec1" | "OpPrec2" | "OpPrec3" | "OpPrec4" => {
+			if parse_tree.children.len() > 1 {
+				let child0 = Some(parse_tree_to_ast(&mut parse_tree.children[0], passed_node));
+				return parse_tree_to_ast(&mut parse_tree.children[1], child0);
+			}else{
+				if passed_node.is_some() {
+					return passed_node.unwrap();
+				}else {
+					return parse_tree.clone();
+				}
+			}
+		}
+		"Op1" | "Op2" | "Op3" | "Op4" => {
+			if parse_tree.children.len() > 2 {
+				if passed_node.is_some() {
+					let rule = parse_tree.children[0].rule.to_owned();
+					let data = parse_tree.data.to_owned();
+					let line = parse_tree.children[0].line;
+					let child1 = parse_tree.children[1].clone();
+					return parse_tree_to_ast(&mut parse_tree.children[2], Some(ASTNode{rule: rule, data: data, children: vec![passed_node.unwrap(), child1], line: line}));
+				}else{
+					panic!("Parsing error: Operator was passed an invalid node when converting to AST on line {}", parse_tree.line);
+				}
+			}else if parse_tree.children.len() == 1 {
+				return parse_tree_to_ast(&mut parse_tree.children[0], passed_node);
+			}else{
+				panic!("Invalid operator used on line {} (is the CFG okay?)", parse_tree.line);
+			}
+		}
+		"NONE" => {
+			if passed_node.is_some() {
+				return passed_node.unwrap();
+			} else {
+				return parse_tree.clone();
+			}
+		}
+		_ => {
+			for i in &mut parse_tree.children {
+				*i = parse_tree_to_ast(i, None);
+			}
+			return parse_tree.clone();
+		}
+	}
+}*/

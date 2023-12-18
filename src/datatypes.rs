@@ -1,5 +1,13 @@
 use std::fmt;
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
+use std::task::Poll;
+use derivative::Derivative;
+use futures::executor;
+use macroquad::Error::FileError;
+use macroquad::prelude::load_texture;
+use macroquad::texture::Texture2D;
 use rust_decimal::prelude::*;
 
 #[derive(Clone, Copy)]
@@ -56,8 +64,8 @@ pub enum Data {
     Label(usize),
     Variable(String),
     Type(String),
+    Object(usize),
     Comma(Box<Data>, Box<Data>),
-    //Object(), //make it a reference to the list of objects
 }
 impl fmt::Display for Data {
     // This trait requires `fmt` with this exact signature.
@@ -70,17 +78,17 @@ impl fmt::Display for Data {
 			Data::Null => {
 				write!(f, "NULL")
 			}
-			Data::Int(data) => {
+			Data::Decimal(data) => {
 				write!(f, "{}", data)
 			}
-			Data::Color(data1, data2, data3, data4) => {
-				write!(f, "Color({}, {}, {}, {})", data1, data2, data3, data4)
-			}
-			Data::Decimal(data) => {
+			Data::Int(data) => {
 				write!(f, "{}", data)
 			}
 			Data::String(data) => {
 				write!(f, "{}", data)
+			}
+			Data::Color(data1, data2, data3, data4) => {
+				write!(f, "Color({}, {}, {}, {})", data1, data2, data3, data4)
 			}
 			Data::Register(data) => {
 				write!(f, "Register {}", data)
@@ -94,22 +102,23 @@ impl fmt::Display for Data {
 			Data::Type(data) => {
 				write!(f, "type {}", data)
 			}
+			Data::Object(data) => {
+				write!(f, "Object {}", data)
+			}
 			Data::Comma(data1, data2) => {
 				write!(f, "{}, {}", data1.to_string(), data2.to_string())
 			}
-			/*Data::Object(data) => {
-				write!(f, "{:?}", data.name)
-			}*/
 		}
     }
 }
 
 #[derive(Debug)]
 #[derive(Clone)]
+//Implement partialeq and eq by using id
 #[derive(PartialEq)]
 #[derive(Eq)]
 pub struct Object {
-	pub id: u32,
+	pub id: usize,
 	pub name: String,
 	pub object_type: String,
 	pub data: HashMap<String, Data>
@@ -119,13 +128,40 @@ impl std::hash::Hash for Object {
     where
         H: std::hash::Hasher,
     {
-        state.write_u32(self.id);
+        state.write_usize(self.id);
         state.finish();
     }
 }
 impl Object {
-	pub fn new(object_type: String, id: u32) -> Object {
+	pub fn new(object_type: String, id: usize) -> Object {
 		return Object{id, name: object_type.to_owned(), object_type, data: HashMap::new()};
+	}
+}
+
+#[derive(Derivative)]
+#[derivative(PartialEq, Eq, Hash, Clone, Debug)]
+pub struct SpriteData {
+	pub path: String,
+	pub name: String,
+	#[derivative(PartialEq="ignore")]
+    #[derivative(Hash="ignore")]
+	pub texture: Texture2D,
+}
+impl SpriteData {
+	pub fn new(path: String, name: String, program: &mut Program) -> String {
+		let tex = executor::block_on(load_texture(path.as_str()));
+		let ret_val;
+		match tex {
+			Ok(texture) => {
+				ret_val = SpriteData{texture: texture, path: path, name: name.to_owned()};
+			}
+			Err(e) => {
+				println!("ERROR LOADING TEXTURE {}: {:?}", path, e);
+				ret_val = SpriteData{texture: Texture2D::empty(), path: path, name: name.to_owned()};
+			}
+		}
+		program.sprites.insert(name.to_owned(), ret_val);
+		return name;
 	}
 }
 
@@ -140,16 +176,53 @@ pub struct FuncData {
 pub struct Program {
 	pub functions: HashMap<String, (FuncData, Vec<Opcode>)>,
 	pub labels: Vec<usize>,
-	pub objects: HashMap<String, Vec<Object>>,
-	pub id_index: u32
+	pub sprites: HashMap<String, SpriteData>,
+	objects: Vec<Object>,
+	objects_sorted: HashMap<String, Vec<usize>>,
+	id_index: usize,
+	context: Vec<usize>
 }
 
 impl Program {
 	pub fn new() -> Program {
-		return Program{functions: HashMap::new(), labels: vec![], objects: HashMap::from([("Program".to_string(), vec![Object::new("Program".to_string(), 1)])]), id_index: 1};
+		return Program{
+			functions: HashMap::new(), 
+			labels: vec![], 
+			sprites: HashMap::new(),
+			objects: vec![Object::new("Program".to_string(), 1)], 
+			objects_sorted: HashMap::from([("Program".to_string(), vec![1])]), 
+			id_index: 1, 
+			context: vec![1]
+		};
 	}
-	pub fn new_object(&mut self, object_type: String) -> Object {
+	pub fn new_object(&mut self, object_type: String) -> usize {
 		self.id_index += 1;
-		return Object::new(object_type, self.id_index);
+		let obj = Object::new(object_type.to_owned(), self.id_index);
+		self.objects.push(obj);
+		self.objects_sorted.insert(object_type, vec![self.id_index]);
+		return self.id_index;
+	}
+	pub fn get_object(&mut self, id: usize) -> &mut Object {
+		return &mut self.objects[id];
+	}
+	pub fn enter_context(&mut self, object: usize) {
+		self.context.push(object);
+	}
+	pub fn exit_context(&mut self) {
+		self.context.pop();
+	}
+	pub fn get_self(&mut self) -> usize {
+		let length = self.context.len();
+		if length > 0 {
+			return self.context[length - 1];
+		}
+		return 0;
+	}
+	pub fn get_other(&mut self) -> usize {
+		let length = self.context.len();
+		if length > 1 {
+			return self.context[length - 2];
+		}
+		return 0;
 	}
 }

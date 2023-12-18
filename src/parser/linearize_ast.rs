@@ -72,9 +72,7 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut u32, curr_pos: usize, program
 			}
 		}
 		"Stat" => {
-			if ast.children.len() == 3 {
-				ret_val.append(&mut linearize(&mut ast.children[1], curr_reg, curr_pos + ret_val.len(), program));
-			} else if ast.children[0].rule == "COLON" {
+			if ast.children.len() == 3 || ast.children[0].rule == "COLON" {
 				ret_val.append(&mut linearize(&mut ast.children[1], curr_reg, curr_pos + ret_val.len(), program));
 			} else {
 				ret_val.append(&mut linearize(&mut ast.children[0], curr_reg, curr_pos + ret_val.len(), program));
@@ -93,7 +91,8 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut u32, curr_pos: usize, program
 				let mut child1 = linearize(&mut ast.children[1], curr_reg, curr_pos + ret_val.len(), program);
 				if child1.len() > 0 {
 					let index = child1.len()-1;
-					child1[index].data = child0[0].data.to_owned();
+					child1[index].data = Data::Register(child0[0].register);
+					ret_val.append(&mut child0);
 					ret_val.append(&mut child1);
 				}else{
 					ret_val.append(&mut child0);
@@ -103,9 +102,9 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut u32, curr_pos: usize, program
 		"Func" => {
 			ret_val.append(&mut linearize(&mut ast.children[1], curr_reg, curr_pos + ret_val.len(), program));
 			if ret_val.len() > 0 {
-				ret_val.push(Opcode{instruction: "FUNC".to_string(), data: Data::Null, data2: Data::Register(ret_val[ret_val.len() - 1].register), register: *curr_reg, line: 0});
+				ret_val.push(Opcode{instruction: "FUNC".to_string(), data: Data::Null, data2: Data::Register(ret_val[ret_val.len() - 1].register), register: *curr_reg, line: ast.line});
 			}else{
-				ret_val.push(Opcode{instruction: "FUNC".to_string(), data: Data::Null, data2: Data::Null, register: *curr_reg, line: 0});
+				ret_val.push(Opcode{instruction: "FUNC".to_string(), data: Data::Null, data2: Data::Null, register: *curr_reg, line: ast.line});
 			}
 			*curr_reg += 1;
 		}
@@ -122,7 +121,7 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut u32, curr_pos: usize, program
 				}
 				ret_val.append(&mut child0);
 				ret_val.append(&mut child1);
-				ret_val.push(Opcode{instruction: "Comma".to_string(), data: reg_1, data2: reg_2, register: *curr_reg, line: 0});
+				ret_val.push(Opcode{instruction: "Comma".to_string(), data: reg_1, data2: reg_2, register: *curr_reg, line: ast.line});
 				*curr_reg += 1;
 			} else if ast.children.len() == 3 {
 				let mut child1 = linearize(&mut ast.children[1], curr_reg, curr_pos + ret_val.len(), program);
@@ -136,7 +135,7 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut u32, curr_pos: usize, program
 				}
 				ret_val.append(&mut child1);
 				ret_val.append(&mut child2);
-				ret_val.push(Opcode{instruction: "Comma".to_string(), data: reg_1, data2: reg_2, register: *curr_reg, line: 0});
+				ret_val.push(Opcode{instruction: "Comma".to_string(), data: reg_1, data2: reg_2, register: *curr_reg, line: ast.line});
 				*curr_reg += 1;
 			}
 		}
@@ -295,12 +294,10 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut u32, curr_pos: usize, program
 			if ast.data.is_some() {
 				ret_val.push(Opcode{instruction: ast.rule.to_owned(), data: Data::String(ast.data.as_ref().unwrap().1.to_owned()), data2: Data::Null, register: *curr_reg, line: ast.line});
 				*curr_reg += 1;
-			}else{
-				if ast.children.len() > 0 {
-					//ret_val.push(Opcode{instruction: ast.rule.to_owned(), data: "UNIMPLEMENTED".to_string(), data2: "".to_string(), register: 0, line: ast.line});
-					for i in &mut ast.children {
-						ret_val.append(&mut linearize(i, curr_reg, curr_pos + ret_val.len(), program));
-					}
+			}else if ast.children.len() > 0 {
+				//ret_val.push(Opcode{instruction: ast.rule.to_owned(), data: "UNIMPLEMENTED".to_string(), data2: "".to_string(), register: 0, line: ast.line});
+				for i in &mut ast.children {
+					ret_val.append(&mut linearize(i, curr_reg, curr_pos + ret_val.len(), program));
 				}
 			}
 		}

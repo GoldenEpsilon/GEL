@@ -7,9 +7,9 @@ The gimmicks will be kept on the side for the most part, simplifying what people
 
 The ideal is to have working code be roughly equivalent to pseudocode - a similar concept to python without the things I find annoying about python.
 
-Currently you can compile the code with `cargo build` and run `parser.exe` (by default found in target/debug) with a file in order to run it!
+Currently you can compile the code with `cargo build` and run `gel.exe` (by default found in target/debug) with a file in order to run it!
 
-(For example, from the base directory running `./target/debug/parser.exe test_files/test.gel` will run `test.gel`.)
+(For example, from the base directory running `./target/debug/gel.exe test_files/test.gel` will run `test.gel`.)
 
 # The Language
 

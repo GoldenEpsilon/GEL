@@ -1,6 +1,9 @@
 #define init():
-	trace("a");
-
+	trace("C");
+	trace("C2");
+	add_sprite("test.png", "test");
+	trace("b");
+	trace("d");
 
 fn draw {
 	clear_background(c_dgray);
@@ -10,4 +13,5 @@ fn draw {
 		draw_text("Goodbye World!", 20.0, 50.0, 30.0, c_red);
 	if(true)
 		draw_text("thing", 20.0, 80.0, 30.0, c_red);
+	draw_sprite("test", 30.0, 120.0, c_white);
 }

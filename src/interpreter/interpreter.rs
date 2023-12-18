@@ -5,6 +5,7 @@ use std::vec;
 use crate::interpreter::unwrap_values::*;
 use crate::interpreter::operators::data_operation;
 use crate::interpreter::builtin_variables::builtin_variables;
+use crate::interpreter::builtin_functions::run_builtin;
 use crate::datatypes::*;
 use macroquad::prelude::*;
 use rust_decimal::prelude::*;
@@ -69,10 +70,10 @@ pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Data{
 									variables.get_mut(&data.to_owned()).unwrap().1 = registers.get_mut(&data2).unwrap().clone();
 								}
 							}
-						}
-					}//else if(){
-						//object/self variable check
-					//}
+						}//else if(program.){
+							//object/self variable check
+						//}
+					}
 				}
 				"Value" => {
 					registers.insert(op.register, op.data.clone());
@@ -84,49 +85,19 @@ pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Data{
 					registers.insert(op.register, Data::Comma(Box::new(op.data.clone()), Box::new(op.data2.clone())));
 				}
 				"FUNC" => {
-					//TODO: 
-					// - Custom functions
-					// - type checking
-					// - input checking
-					let mut data = vec![op.data.clone()];
-					data.append(&mut unwrap_function_inputs(&op.data2, &registers, &variables));
-					match &data[..] {
-						[Data::Variable(func_name), arg] if func_name.to_string().as_str() == "print" || func_name.to_string().as_str() == "trace" => {
-							println!("{}", get_value(arg, &registers, &variables).to_string());
-							registers.insert(op.register, Data::Null);
-						}
-						[Data::Variable(func_name), Data::String(arg), Data::String(arg2)] if func_name.to_string().as_str() == "regex" => {
-							registers.insert(op.register, Data::Int(Regex::new(&arg).unwrap().is_match(&arg2) as i32));
-						}
-						[Data::Variable(func_name), Data::Color(r,g,b,a)] if func_name.to_string().as_str() == "clear_background" => {
-							clear_background(Color::new(r.to_f32().unwrap(), g.to_f32().unwrap(), b.to_f32().unwrap(), a.to_f32().unwrap()));
-						}
-						[Data::Variable(func_name), Data::String(str), Data::Decimal(x), Data::Decimal(y), Data::Decimal(fntsz), Data::Color(r,g,b,a)] if func_name.to_string().as_str() == "draw_text" => {
-							draw_text(str.as_str(), x.to_f32().unwrap(), y.to_f32().unwrap(), fntsz.to_f32().unwrap(), Color::new(r.to_f32().unwrap(), g.to_f32().unwrap(), b.to_f32().unwrap(), a.to_f32().unwrap()));
-						}
-						[Data::Variable(func_name), Data::String(object_type)] if func_name.to_string().as_str() == "object_create" => {
-							program.new_object(object_type.to_owned());
-						}
-						_ => {
-							if let Data::Variable(func_name) = &data[0] { 
-								if program.functions.contains_key(func_name) {
-									registers.insert(op.register, interpret_program(program, func_name));
-								}
-							}
-							/*if functions.contains_key(&data[0]) {
-								func_stack.push(position);
-								jump_point = functions[&data[0]].0;
+					if let Data::Variable(func) = get_value(&op.data, &registers, &variables){
+						let data = run_builtin(func.as_str(), unwrap_function_inputs(&op.data2, &registers, &variables), &registers, &variables, program);
+						if data.is_none() {
+							if program.functions.contains_key(&func) {
+								registers.insert(op.register, interpret_program(program, &func));
 							}else{
-								match &data[0]{
-									Data::Variable(func_name) => {
-										println!("INVALID FUNCTION {} ON LINE {}", func_name, op.line);
-									}
-									dat => {
-										println!("INVALID DATA TRYING TO BE FUNCTION: {:?}", dat);
-									}
-								}
-							}*/
+								panic!("ERROR: FUNCTION {} DOES NOT EXIST ON LINE {}", func, op.line);
+							}
+						}else{
+							registers.insert(op.register, data.unwrap());
 						}
+					} else {
+						panic!("ERROR: {} IS NOT A DATATYPE THAT CAN BE A FUNCTION ON LINE {}", op.data, op.line);
 					}
 				}
 				"ARG" => {}

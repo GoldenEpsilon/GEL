@@ -1,4 +1,3 @@
-use std::env;
 use std::fs;
 use crate::datatypes::Program;
 use crate::datatypes::TokenAction;
@@ -8,17 +7,22 @@ use crate::scanner::scanner::scanner;
 use crate::grammar_generator::grammar_generator;
 use crate::optimizers::ast_optimizer::optimize_ast;
 
-pub fn compile() -> Program {
-	println!("0a");
-    let args: Vec<String> = env::args().collect();
-	println!("0b");
+pub fn compile_file(filename: &str) -> Program {
 	
-	let filename = &args[1];
-	println!("0c");
+	//Check to make sure we have a file to read
+	if filename == "" {
+		return Program::new();
+	}
+
+	//let filename = &args[1];
 	
 	let input = fs::read_to_string(filename)
         .expect("Something went wrong reading the file");
-	println!("0d");
+
+	return compile(input);
+}
+
+pub fn compile(input: String) -> Program {
 	
 	//FUNCDEF is above COMMENT because otherwise #define would count as a comment
 	let token_list = vec![

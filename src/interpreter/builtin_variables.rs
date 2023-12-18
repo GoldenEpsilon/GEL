@@ -6,6 +6,7 @@ pub fn builtin_variables() -> HashMap<String, (Data, Data)> {
     let mut ret_val = HashMap::new();
     new_builtin_color(&mut ret_val, "c_dgray", 0.31, 0.31, 0.31, 1.0);
     new_builtin_color(&mut ret_val, "c_red", 1.0, 0.0, 0.0, 1.0);
+    new_builtin_color(&mut ret_val, "c_white", 1.0, 1.0, 1.0, 1.0);
     new_builtin_generic(&mut ret_val, "test", "int", Data::Int(1));
     return ret_val;
 }

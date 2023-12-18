@@ -15,7 +15,9 @@ pub fn get_value(data: &Data, registers: &HashMap<u32, Data>, variables: &HashMa
 		Data::Variable(true_data) => {
 			let var = variables.get(true_data);
 			if !var.is_some() {
-				panic!("NONEXISTENT VARIABLE ACCESS TRYING TO ACCESS {:?}", data);
+				//probably a function, regardless just return null to make it happy
+				return data.clone();
+				//panic!("NONEXISTENT VARIABLE ACCESS TRYING TO ACCESS {:?}", data);
 			}
 			return get_value(&var.unwrap().1, registers, variables);
 		}

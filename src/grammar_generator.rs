@@ -102,6 +102,13 @@ pub fn grammar_generator(inputstr: String) -> HashMap<String, Vec<Vec<GrammarTok
 				// C: a c
 				// D: a d
 				// (problem being that you have to go through B in code, but can't let it diverge from going to C)
+				//Possible Solution:
+				// A: A' C
+				// A': ([B,]C|D)[a] A'2 | (B)[b]
+				// A'2: ([B,]C)[c] | (D)[a d]
+				// B: C | b
+				// C: a c
+				// D: a d
 				panic!("This grammar is not predictive! Take another look at {} and its descendants", rule_to_fix.1);
 			}
 		} else {
