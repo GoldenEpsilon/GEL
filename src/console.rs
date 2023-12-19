@@ -13,6 +13,16 @@ use crate::interpreter::interpreter::interpret_program;
 use crate::parser::parser_setup::compile;
 use crate::parser::parser_setup::compile_file;
 
+
+
+pub fn console_autocomplete(console: &mut Console, programs: &mut Vec<Program>){
+    if let Some(captures) = Regex::new(r"/\S*").unwrap().captures(&console.console_text) {
+        //go through list of commands that match text (maybe with regex?), if there's a perfect match go to the next alphabetically
+    }else if let Some(captures) = Regex::new(r"/(load) (.*)").unwrap().captures(&console.console_text) {
+        //autocomplete directories and files, in the same way commands get autocompleted
+    }
+}
+
 pub fn console_submit(console: &mut Console, programs: &mut Vec<Program>){
     //look, my muscle memory from NTT isn't going away anytime soon, I might as well accept it.
     if let Some(captures) = Regex::new(r"/(gel|run|gml) (.*)").unwrap().captures(&console.console_text) {

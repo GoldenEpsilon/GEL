@@ -17,7 +17,7 @@ use crate::optimizers::ast_optimizer::optimize_ast;
 static GEL_GRAMMAR: Lazy<HashMap<String, Vec<Vec<GrammarToken>>>> = Lazy::new(|| grammar_generator(String::from("
 	Root::= Block
 	Block::= Stat Block | NONE
-	Stat::= LBRACE Block RBRACE | COLON PythonBlock | Def Semi | Stat2 Semi | If | For | FuncDef Semi
+	Stat::= LBRACE Block RBRACE | COLON PythonBlock | Def Semi | Stat2 Semi | If | For | FuncDef Semi | SET Expr
 	PythonBlock::= INDENT Block DEDENT | Stat
 	Stat2::= ID DOT Stat2 | ID AsgnOp | ID Func
 	Semi::= SEMI | NONE
@@ -76,7 +76,7 @@ static TOKEN_LIST: Lazy<Vec<(&str, &str, TokenAction)>> = Lazy::new(|| vec![
 	("SETSUB",    r"-=", TokenAction::Identity),
 	("SETMUL",    r"\*=", TokenAction::Identity),
 	("SETDIV",    r"/=", TokenAction::Identity),
-	("EXP",    r"\*\*|^", TokenAction::Identity),
+	("EXP",    r"\*\*|\^", TokenAction::Identity),
 	("DOT",    r"\.", TokenAction::Identity),
 	("PLUS",    r"\+", TokenAction::Identity),
 	("MINUS",    r"-", TokenAction::Identity),

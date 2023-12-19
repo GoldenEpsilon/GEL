@@ -1,10 +1,10 @@
-#define init():
+#define init(){
 	trace("C");
 	trace("C2");
 	add_sprite("test.png", "test");
 	trace("b");
 	trace("d");
-
+}
 fn draw {
 	clear_background(c_dgray);
 	if(true)

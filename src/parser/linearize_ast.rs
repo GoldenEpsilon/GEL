@@ -74,6 +74,12 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut u32, curr_pos: usize, program
 		"Stat" => {
 			if ast.children.len() == 3 || ast.children[0].rule == "COLON" {
 				ret_val.append(&mut linearize(&mut ast.children[1], curr_reg, curr_pos + ret_val.len(), program));
+			} else if ast.children[0].rule == "SET" {
+				ret_val.append(&mut linearize(&mut ast.children[1], curr_reg, curr_pos + ret_val.len(), program));
+				ret_val.push(Opcode{instruction: "ID".to_string(), data: Data::Variable("print".to_owned()), data2: Data::Null, register: *curr_reg, line: ast.line});
+				*curr_reg += 1;
+				ret_val.push(Opcode{instruction: "FUNC".to_string(), data: Data::Register(*curr_reg - 1), data2: Data::Register(ret_val[ret_val.len() - 2].register), register: *curr_reg, line: ast.line});
+				*curr_reg += 1;
 			} else {
 				ret_val.append(&mut linearize(&mut ast.children[0], curr_reg, curr_pos + ret_val.len(), program));
 			}

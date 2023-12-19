@@ -56,17 +56,21 @@ async fn main() {
     let mut current_frame = 0;
     let mut console = Console { open: false, just_opened: false, console_text: String::new(), console_log: vec![], console_history: vec![], index: 0 };
     loop {
+        if console.open {
+            if is_key_pressed(KeyCode::Tab) {
+                console_autocomplete(&mut console, &mut programs);
+            }
+            if is_key_pressed(KeyCode::Enter) {
+                console_submit(&mut console, &mut programs);
+            }
+        }
+
         for program in &mut programs {
             program.current_frame = current_frame;
             if !program.initialized {
                 interpret_program(program, "");
                 interpret_program(program, "init");
                 program.initialized = true;
-            }
-        }
-        if is_key_pressed(KeyCode::Enter) {
-            if console.open {
-                console_submit(&mut console, &mut programs);
             }
         }
 
