@@ -33,6 +33,7 @@ pub fn run_builtin(name: &str, args: Vec<Data>, registers: &HashMap<u32, Data>, 
         "print" | "trace" => {
             for arg in args {
                 println!("{}", get_value(&arg, &registers, &variables).to_string());
+                program.log.push(get_value(&arg, &registers, &variables).to_string());
             }
             return Some(Data::Null);
         }
@@ -70,7 +71,7 @@ pub fn run_builtin(name: &str, args: Vec<Data>, registers: &HashMap<u32, Data>, 
                 return Some(Data::Null);
             }
         }
-        //TODO: make sprite loading nonsync
+        //TODO: make sprite loading nonsync?
         "add_sprite" => {
             if let [Data::String(path), Data::String(name)] = &args[..] {
                 return Some(Data::String(SpriteData::new(path.to_owned(), name.to_owned(), program)));
@@ -88,10 +89,14 @@ pub fn run_builtin(name: &str, args: Vec<Data>, registers: &HashMap<u32, Data>, 
                 return Some(Data::Null);
             }
         }
-        /*"mouse_position" => {
+        "mouse_position_x" => {
             let mouse_pos = mouse_position();
-            return Some(Data::Decimal(mouse_pos.0), Data::Decimal(mouse_pos.1));
-        }*/
+            return Some(Data::Decimal(Decimal::from_f32(mouse_pos.0).unwrap()));
+        }
+        "mouse_position_y" => {
+            let mouse_pos = mouse_position();
+            return Some(Data::Decimal(Decimal::from_f32(mouse_pos.1).unwrap()));
+        }
         _ => {
             return None;
         }

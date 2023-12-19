@@ -1,10 +1,10 @@
-
 use std::collections::HashMap;
+use once_cell::sync::Lazy;
 use crate::datatypes::GrammarToken;
 use crate::datatypes::ASTNode;
 
 //A Top-Down Parser
-pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, Vec<Vec<GrammarToken>>>) -> ASTNode {
+pub fn parser(token_list: Vec<(String, String, i32)>, grammar: &Lazy<HashMap<String, Vec<Vec<GrammarToken>>>>) -> Result<ASTNode, String> {
 	let none = GrammarToken{is_terminal: true, value: String::from("NONE"), lookahead: vec!["NONE".to_string()], is_subrule: false};
 	let end = GrammarToken{is_terminal: true, value: String::from("END"), lookahead: vec!["".to_string()], is_subrule: false};
 	let endtoken = (String::from("END"), String::from(""), 0);
@@ -17,7 +17,7 @@ pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, V
 	//Check for an empty program
 	let first_match = tokens.next();
 	if first_match.is_none() {
-		return ast;
+		return Ok(ast);
 	}
 	let mut to_match = first_match.unwrap();
 	
@@ -27,12 +27,12 @@ pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, V
 			break;
 		} else if focus.value == none.value {
 			if stack.len() == 0 {
-				panic!("Whoops, parser error!\nRan out of stuff to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2);
-				//return ast;
+				return Err(format!("Whoops, parser error!\nRan out of stuff to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2));
+				//panic!("Whoops, parser error!\nRan out of stuff to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2);
 			}
 			if ast_stack.len() == 0 {
-				panic!("Whoops, parser error!\nRan out of stuff in my AST to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2);
-				//return ast;
+				return Err(format!("Whoops, parser error!\nRan out of stuff in my AST to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2));
+				//panic!("Whoops, parser error!\nRan out of stuff in my AST to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2);
 			}
 			ast_focus = ast_stack.pop().unwrap();
 			focus = stack.pop().unwrap();
@@ -72,8 +72,8 @@ pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, V
 					}
 					continue;
 				}
-				panic!("Whoops, parser error!\nI ran into a dead end thinking that I found a {:#?}, but I found a {:#?}, which was {:#?} on line {:#?}", focus.value, to_match.0, to_match.1, to_match.2);
-				//return ast;
+				return Err(format!("Whoops, parser error!\nI ran into a dead end thinking that I found a {:#?}, but I found a {:#?}, which was {:#?} on line {:#?}", focus.value, to_match.0, to_match.1, to_match.2));
+				//panic!("Whoops, parser error!\nI ran into a dead end thinking that I found a {:#?}, but I found a {:#?}, which was {:#?} on line {:#?}", focus.value, to_match.0, to_match.1, to_match.2);
 			}
 			for r in rule_out.rev() {
 				stack.push(r);
@@ -93,8 +93,8 @@ pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, V
 			ast_focus = ast_stack.pop().unwrap().to_owned();
 		} else if focus.value == to_match.0 {
 			if stack.len() == 0 {
-				panic!("Whoops, parser error!\nRan out of stuff to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2);
-				//return ast;
+				return Err(format!("Whoops, parser error!\nRan out of stuff to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2));
+				//panic!("Whoops, parser error!\nRan out of stuff to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2);
 			}
 			find_ast_node(&ast_focus, &mut ast).data = Some(to_match.to_owned());
 			find_ast_node(&ast_focus, &mut ast).line = to_match.2;
@@ -106,8 +106,8 @@ pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, V
 			}
 			focus = stack.pop().unwrap();
 			if ast_stack.len() == 0 {
-				panic!("Whoops, parser error!\nRan out of stuff in my AST to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2);
-				//return ast;
+				return Err(format!("Whoops, parser error!\nRan out of stuff in my AST to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2));
+				//panic!("Whoops, parser error!\nRan out of stuff in my AST to find when I found a {:#?}, which was {:#?} on line {:#?}", to_match.0, to_match.1, to_match.2);
 			}
 			ast_focus = ast_stack.pop().unwrap();
 		} else if to_match.2 == -1 {
@@ -118,15 +118,15 @@ pub fn parser(token_list: Vec<(String, String, i32)>, grammar: HashMap<String, V
 				to_match = &endtoken;
 			}
 		} else {
-			panic!("Whoops, parser error!\nI was thinking I would find a {:#?}, but I found a {:#?}, which was {:#?} on line {:#?}", focus.value, to_match.0, to_match.1, to_match.2);
-			//return ast;
+			return Err(format!("Whoops, parser error!\nI was thinking I would find a {:#?}, but I found a {:#?}, which was {:#?} on line {:#?}", focus.value, to_match.0, to_match.1, to_match.2));
+			//panic!("Whoops, parser error!\nI was thinking I would find a {:#?}, but I found a {:#?}, which was {:#?} on line {:#?}", focus.value, to_match.0, to_match.1, to_match.2);
 		}
 	}
 
 	//Remove subrules to clean up the AST
 	clean_ast(&mut ast);
 
-	return ast;
+	return Ok(ast);
 }
 
 fn clean_ast(ast: &mut ASTNode) {

@@ -1,11 +1,7 @@
 use std::fmt;
 use std::collections::HashMap;
-use std::future::Future;
-use std::pin::Pin;
-use std::task::Poll;
 use derivative::Derivative;
 use futures::executor;
-use macroquad::Error::FileError;
 use macroquad::prelude::load_texture;
 use macroquad::texture::Texture2D;
 use rust_decimal::prelude::*;
@@ -180,7 +176,18 @@ pub struct Program {
 	objects: Vec<Object>,
 	objects_sorted: HashMap<String, Vec<usize>>,
 	id_index: usize,
-	context: Vec<usize>
+	context: Vec<usize>,
+	pub log: Vec<String>
+}
+
+#[derive(Debug)]
+pub struct Console {
+	pub open: bool,
+	pub just_opened: bool,
+	pub console_text: String,
+	pub console_log: Vec<(String, u32)>,
+	pub console_history: Vec<String>,
+	pub index: usize
 }
 
 impl Program {
@@ -192,7 +199,8 @@ impl Program {
 			objects: vec![Object::new("Program".to_string(), 1)], 
 			objects_sorted: HashMap::from([("Program".to_string(), vec![1])]), 
 			id_index: 1, 
-			context: vec![1]
+			context: vec![1],
+			log: vec![]
 		};
 	}
 	pub fn new_object(&mut self, object_type: String) -> usize {

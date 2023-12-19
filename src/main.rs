@@ -31,14 +31,10 @@
 
 use std::env;
 use macroquad::prelude::*;
-use macroquad::ui::InputHandler;
-use macroquad::ui::Skin;
-use macroquad::ui::root_ui;
-use macroquad::ui::hash;
-use macroquad::ui::widgets;
-use regex::Regex;
+use crate::datatypes::Console;
 use crate::parser::parser_setup::*;
 use crate::interpreter::interpreter::interpret_program;
+use crate::console::*;
 
 mod datatypes;
 mod parser;
@@ -46,22 +42,10 @@ mod scanner;
 mod optimizers;
 mod interpreter;
 mod grammar_generator;
+mod console;
 
-#[macroquad::main("BasicShapes")]
+#[macroquad::main("GEL")]
 async fn main() {
-    let console_skin = {
-        let editbox_style = root_ui()
-            .style_builder()
-            .font_size(30)
-            .background(Image::gen_image_color(1, 1, Color::from_rgba(40, 40, 40, 255)))
-            .text_color(Color::from_rgba(255, 255, 255, 255))
-            .build();
-
-        Skin {
-            editbox_style,
-            ..root_ui().default_skin()
-        }
-    };
     std::env::set_var("RUST_BACKTRACE", "1");
 	println!("0");
     let filename;
@@ -75,78 +59,27 @@ async fn main() {
 	println!("1");
 	interpret_program(&mut program, "");
 	interpret_program(&mut program, "init");
-    let mut console = false;
-    let mut consoletext = "".to_owned();
-    let mut copy = "".to_owned();
+    let mut copy = String::new();
     let mut current_frame = 0;
+    let mut console = Console { open: false, just_opened: false, console_text: String::new(), console_log: vec![], console_history: vec![], index: 0 };
     loop {
-        /*clear_background(RED);
-
-        draw_line(40.0, 40.0, 100.0, 200.0, 15.0, BLUE);
-        draw_rectangle(screen_width() / 2.0 - 60.0, 100.0, 120.0, 60.0, GREEN);
-        draw_circle(screen_width() - 30.0, screen_height() - 30.0, 15.0, YELLOW);
-
-        draw_text("IT WORKS!", 20.0, 20.0, 30.0, DARKGRAY);*/
-
-        if console {
-            let mut nextchar = get_char_pressed();
-            while nextchar.is_some() {
-                //println!("{}", nextchar.unwrap() as u32);
-                //24=ctrlx,3=ctrlc,22=ctrlv,8=bckspc,13=enter
-                match nextchar.unwrap() {
-                    /*'\u{00061}' => {
-                        //let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
-                        //let msg = consoletext.as_str();
-                        //ctx.set_contents(msg.to_owned()).unwrap();
-                        //println!("{}", ctx.get_contents().unwrap());
-                    }
-                    '\u{0008}' => {
-                        consoletext.pop();
-                    }
-                    '\u{0003}' => {
-                        copy = consoletext.to_owned();
-                    }
-                    '\u{0018}' => {
-                        copy = consoletext.to_owned();
-                        consoletext = "".to_owned();
-                    }
-                    '\u{0016}' => {
-                        //let mut ctx: ClipboardContext = ClipboardContext::new().unwrap();
-                        //consoletext = format!("{}{}", consoletext, ctx.get_contents().unwrap());
-                    }*/
-                    '\u{000d}' => {
-                        if let Some(captures) = Regex::new(r"/gel (.*)").unwrap().captures(&consoletext) {
-                            interpret_program(&mut compile(captures.get(1).unwrap().as_str().to_owned()), "");
-                            consoletext = "".to_owned();
-                        }
-                    }
-                    _ => {}
+        let mut nextchar = get_char_pressed();
+        while nextchar.is_some() {
+            //println!("{}", nextchar.unwrap() as u32);
+            //24=ctrlx,3=ctrlc,22=ctrlv,8=bckspc,13=enter,27=escape
+            if let Some(char) = nextchar {
+                if console.open {
+                    console_input(char, &mut console);
                 }
-                nextchar = get_char_pressed();
             }
+            nextchar = get_char_pressed();
         }
 
 	    interpret_program(&mut program, "step");
-        
-        let console_opening = !console;
-        if is_key_pressed(KeyCode::GraveAccent) {
-            console = !console;
-            root_ui().mouse_down((10.0, screen_height() - 50.0));
-        }
 
 	    interpret_program(&mut program, "draw");
 
-        if console {
-            
-            root_ui().push_skin(&console_skin);
-
-            widgets::InputText::new(hash!()).size(vec2(screen_width(), 30.0)).position(vec2(0.0, screen_height() - 60.0)).ui(&mut root_ui(), &mut consoletext);
-            
-            if console_opening {
-                consoletext = "".to_owned();
-            }
-            root_ui().pop_skin();
-        }
+        console_step(&mut console, &mut program);
 
         current_frame += 1;
         next_frame().await;
