@@ -36,16 +36,16 @@ static GEL_GRAMMAR: Lazy<HashMap<String, Vec<Vec<GrammarToken>>>> = Lazy::new(||
 	Else::=	ELSE Stat |	NONE
 	For::= FOR LPAREN Def SEMI Expr SEMI Stat2 RPAREN Stat
 	Expr::=	OpPrec5
-	OpPrec5::= OpPrec4 Op5
-	Op5::= AND OpPrec4 Op5 | OR OpPrec4 Op5 | NONE
-	OpPrec4::= OpPrec3 Op4
-	Op4::= EQ OpPrec3 Op4 | LT OpPrec3 Op4 | GT OpPrec3 Op4 | LE OpPrec3 Op4 | GE OpPrec3 Op4 | NONE
-	OpPrec3::= OpPrec2 Op3
-	Op3::= PLUS OpPrec2 Op3 | MINUS OpPrec2 Op3 | NONE
-	OpPrec2::= OpPrec1 Op2
-	Op2::= MULT OpPrec1 Op2 | DIV OpPrec1 Op2 | NONE
-	OpPrec1::= Unit Op1
-	Op1::= EXP Unit Op1 | NONE
+	OpPrec5::= OpPrec4 OpBool
+	OpBool::= AND OpPrec4 OpBool | OR OpPrec4 OpBool | NONE
+	OpPrec4::= OpPrec3 OpCmp
+	OpCmp::= EQ OpPrec3 OpCmp | LT OpPrec3 OpCmp | GT OpPrec3 OpCmp | LE OpPrec3 OpCmp | GE OpPrec3 OpCmp | NONE
+	OpPrec3::= OpPrec2 OpAS
+	OpAS::= PLUS OpPrec2 OpAS | MINUS OpPrec2 OpAS | NONE
+	OpPrec2::= OpPrec1 OpMD
+	OpMD::= MULT OpPrec1 OpMD | DIV OpPrec1 OpMD | NONE
+	OpPrec1::= Unit OpExp
+	OpExp::= EXP Unit OpExp | NONE
 	Unit::=	LPAREN Expr RPAREN TypeHint | Stat2 TypeHint | Val TypeHint
 	TypeHint::= LPAREN TYPE RPAREN | NONE
 	Val::= DECIMAL | INT | STRING
@@ -76,7 +76,7 @@ static TOKEN_LIST: Lazy<Vec<(&str, &str, TokenAction)>> = Lazy::new(|| vec![
 	("SETSUB",    r"-=", TokenAction::Identity),
 	("SETMUL",    r"\*=", TokenAction::Identity),
 	("SETDIV",    r"/=", TokenAction::Identity),
-	("EXP",    r"\*\*", TokenAction::Identity),
+	("EXP",    r"\*\*|^", TokenAction::Identity),
 	("DOT",    r"\.", TokenAction::Identity),
 	("PLUS",    r"\+", TokenAction::Identity),
 	("MINUS",    r"-", TokenAction::Identity),
@@ -108,10 +108,16 @@ pub fn compile_file(filename: &str) -> Program {
 
 	//let filename = &args[1];
 	
-	let input = fs::read_to_string(filename)
-        .expect("Something went wrong reading the file");
-
-	return compile(input);
+	match fs::read_to_string(filename) {
+		Ok(input) => {
+			return compile(input);
+		}
+		Err(error) => {
+			let mut program = Program::new();
+			program.log.push(format!("Something went wrong reading the file: {}", error));
+			return program;
+		}
+	}
 }
 
 pub fn compile(input: String) -> Program {

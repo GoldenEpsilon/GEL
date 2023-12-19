@@ -11,36 +11,38 @@ use crate::datatypes::Console;
 use crate::datatypes::Program;
 use crate::interpreter::interpreter::interpret_program;
 use crate::parser::parser_setup::compile;
+use crate::parser::parser_setup::compile_file;
 
-pub fn console_input(input: char, console: &mut Console){
-    match input {
-        '\u{000d}' => {
-            //look, my muscle memory from NTT isn't going away anytime soon, I might as well accept it.
-            if let Some(captures) = Regex::new(r"/(gel|run|gml) (.*)").unwrap().captures(&console.console_text) {
-                console.console_history.push(console.console_text.to_owned());
-                let mut command_program = compile(captures.get(2).unwrap().as_str().to_owned());
-                interpret_program(&mut command_program, "");
-                for message in &command_program.log {
-                    console.console_log.push((message.to_owned(), 600));
-                }
-            }
-            else{
-                console.console_log.push((console.console_text.to_owned(), 600));
-            }
-            console.console_text = String::new();
-            console.open = false;
-        }
-        _ => {
+pub fn console_submit(console: &mut Console, programs: &mut Vec<Program>){
+    //look, my muscle memory from NTT isn't going away anytime soon, I might as well accept it.
+    if let Some(captures) = Regex::new(r"/(gel|run|gml) (.*)").unwrap().captures(&console.console_text) {
+        let mut command_program = compile(captures.get(2).unwrap().as_str().to_owned());
+        interpret_program(&mut command_program, "");
+        for message in &command_program.log {
+            console.console_log.push((message.to_owned(), 600));
         }
     }
+    else if let Some(captures) = Regex::new(r"/(load) (.*)").unwrap().captures(&console.console_text) {
+        console.console_history.push(console.console_text.to_owned());
+        //TODO: if the program already exists, replace instead of loading a new copy
+        programs.push(compile_file(captures.get(2).unwrap().as_str()));
+    }
+    else{
+        console.console_log.push((console.console_text.to_owned(), 600));
+    }
+    console.console_history.push(console.console_text.to_owned());
+    console.console_text = String::new();
+    console.open = false;
 }
 
-pub fn console_step(console: &mut Console, program: &mut Program){
+pub fn console_log(console: &mut Console, program: &mut Program){
     for message in &program.log {
         console.console_log.push((message.to_owned(), 600));
     }
     program.log = vec![];
+}
 
+pub fn console_step(console: &mut Console){
     let console_background_color: Color = Color::from_rgba(40, 40, 40, 255);
     let console_text_color: Color = Color::from_rgba(255, 255, 255, 255);
     let console_skin: Skin = {
@@ -111,10 +113,37 @@ pub fn console_step(console: &mut Console, program: &mut Program){
             if *age > 0 {
                 *age = *age - 1;
             }
-            let TextDimensions { width: w, .. } = measure_text(text, None, 30, 1.0);
-            y -= 35.0;
-            draw_rectangle(0.0, y, w + 10.0, 30.0, console_background_color);
-            draw_text(text, 5.0, y + 25.0, 30.0, console_text_color);
+            let mut lines = vec![];
+            for line in text.lines() {
+                let mut line_pos = 0;
+                while line_pos < line.len() {
+                    let mut cut_line = &line[line_pos..];
+                    let TextDimensions { width: w, .. } = measure_text(cut_line, None, 30, 1.0);
+                    if w > screen_width() - 20.0 {
+                        let mut i = line_pos + 1;
+                        loop {
+                            cut_line = &line[line_pos..i];
+                            let TextDimensions { width: w, .. } = measure_text(cut_line, None, 30, 1.0);
+                            i += 1;
+                            if i >= line.len() || w > screen_width() - 20.0 {
+                                i -= 1;
+                                line_pos = i;
+                                break;
+                            }
+                        }
+                    } else {
+                        line_pos = line.len();
+                    }
+                    lines.push(cut_line.to_owned());
+                }
+            }
+            y -= 5.0;
+            for line in lines.iter().rev() {
+                y -= 30.0;
+                let TextDimensions { width: w, .. } = measure_text(line, None, 30, 1.0);
+                draw_rectangle(0.0, y, f32::min(w + 10.0, screen_width()), 30.0, console_background_color);
+                draw_text(line, 5.0, y + 25.0, 30.0, console_text_color);
+            }
         }
         widgets::InputText::new(hash!()).size(vec2(screen_width(), 30.0)).position(vec2(0.0, screen_height() - 60.0)).ui(&mut root_ui(), &mut console.console_text);
         root_ui().pop_skin();
@@ -123,14 +152,41 @@ pub fn console_step(console: &mut Console, program: &mut Program){
         let mut y = screen_height() - 60.0;
         for (text, ref mut age) in console.console_log.iter_mut().rev(){
             if *age > 0 {
-                let TextDimensions { width: w, .. } = measure_text(text, None, 30, 1.0);
-                y -= 35.0;
                 let mut background_color = console_background_color.to_owned();
                 background_color.a = (*age as f32) / 200.0;
-                draw_rectangle(0.0, y, w + 10.0, 30.0, background_color);
                 let mut text_color = console_text_color.to_owned();
                 text_color.a = (*age as f32) / 200.0;
-                draw_text(text, 5.0, y + 25.0, 30.0, text_color);
+                let mut lines = vec![];
+                for line in text.lines() {
+                    let mut line_pos = 0;
+                    while line_pos < line.len() {
+                        let mut cut_line = &line[line_pos..];
+                        let TextDimensions { width: w, .. } = measure_text(cut_line, None, 30, 1.0);
+                        if w > screen_width() - 20.0 {
+                            let mut i = line_pos + 1;
+                            loop {
+                                cut_line = &line[line_pos..i];
+                                let TextDimensions { width: w, .. } = measure_text(cut_line, None, 30, 1.0);
+                                i += 1;
+                                if i >= line.len() || w > screen_width() - 20.0 {
+                                    i -= 1;
+                                    line_pos = i;
+                                    break;
+                                }
+                            }
+                        } else {
+                            line_pos = line.len();
+                        }
+                        lines.push(cut_line.to_owned());
+                    }
+                }
+                y -= 5.0;
+                for line in lines.iter().rev() {
+                    y -= 30.0;
+                    let TextDimensions { width: w, .. } = measure_text(line, None, 30, 1.0);
+                    draw_rectangle(0.0, y, f32::min(w + 10.0, screen_width()), 30.0, console_background_color);
+                    draw_text(line, 5.0, y + 25.0, 30.0, console_text_color);
+                }
                 *age = *age - 1;
             }
         }

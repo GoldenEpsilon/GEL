@@ -232,7 +232,34 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut u32, curr_pos: usize, program
 			}
 			ret_val.append(&mut op_list);
 		}
-		"Op1" | "Op2" | "Op3" | "Op4" => {
+		"OpExp" => {
+			if ast.children.len() > 2 {
+				let child0 = linearize(&mut ast.children[0], curr_reg, curr_pos + ret_val.len(), program);
+				let mut child1 = linearize(&mut ast.children[1], curr_reg, curr_pos + ret_val.len(), program);
+				let mut reg = Data::Register(child1[child1.len() - 1].register);
+				ret_val.append(&mut child1);
+				let index = ret_val.len();
+				let mut child2 = linearize(&mut ast.children[2], curr_reg, curr_pos + ret_val.len(), program);
+				if child2.iter().position(|r| r.instruction == "FLAG").is_some() {
+					//set first op's left side to register
+					let _index = child2.iter().position(|r| r.instruction == "FLAG").unwrap();
+					child2.remove(_index);
+					child2[_index].data = reg;
+					reg = Data::Register(child2[_index].register);
+					ret_val.splice(index..index, child2.splice(.._index, []));
+					ret_val.append(&mut child2);
+				}
+				//pushing a custom instruction here as an indicator for OpPriority to handle
+				ret_val.push(Opcode{instruction: "FLAG".to_string(), data: Data::Null, data2: Data::Null, register: 0, line: 0});
+				//create new operator, keep track of register
+				ret_val.push(Opcode{instruction: child0[0].instruction.to_owned(), data: Data::Null, data2: reg, register: *curr_reg, line: ast.line});
+				*curr_reg += 1;
+			}else if ast.children.len() == 1 {
+				let mut child = linearize(&mut ast.children[0], curr_reg, curr_pos + ret_val.len(), program);
+				ret_val.append(&mut child);
+			}
+		}
+		"OpMD" | "OpAS" | "OpCmp" => {
 			if ast.children.len() > 2 {
 				let child0 = linearize(&mut ast.children[0], curr_reg, curr_pos + ret_val.len(), program);
 				let mut child1 = linearize(&mut ast.children[1], curr_reg, curr_pos + ret_val.len(), program);

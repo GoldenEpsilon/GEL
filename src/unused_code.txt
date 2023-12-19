@@ -22,7 +22,7 @@
 				}
 			}
 		}
-		"Op1" | "Op2" | "Op3" | "Op4" => {
+		"OpExp" | "OpMD" | "OpAS" | "OpCmp" => {
 			if parse_tree.children.len() > 2 {
 				if passed_node.is_some() {
 					let rule = parse_tree.children[0].rule.to_owned();

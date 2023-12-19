@@ -169,7 +169,10 @@ pub struct FuncData {
 }
 
 #[derive(Debug)]
+#[derive(Default)]
 pub struct Program {
+	pub initialized: bool,
+	pub current_frame: i32,
 	pub functions: HashMap<String, (FuncData, Vec<Opcode>)>,
 	pub labels: Vec<usize>,
 	pub sprites: HashMap<String, SpriteData>,
@@ -200,7 +203,8 @@ impl Program {
 			objects_sorted: HashMap::from([("Program".to_string(), vec![1])]), 
 			id_index: 1, 
 			context: vec![1],
-			log: vec![]
+			log: vec![],
+			..Default::default()
 		};
 	}
 	pub fn new_object(&mut self, object_type: String) -> usize {

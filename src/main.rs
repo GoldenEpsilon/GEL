@@ -47,39 +47,42 @@ mod console;
 #[macroquad::main("GEL")]
 async fn main() {
     std::env::set_var("RUST_BACKTRACE", "1");
-	println!("0");
-    let filename;
+    let mut programs = vec![];
     let args: Vec<String> = env::args().collect();
-    if args.len() <= 1 {
-        filename = "";
-	}else{
-        filename = &args[1];
+    if args.len() > 1 {
+        programs.push(compile_file(&args[1]));
     }
-	let mut program = compile_file(filename);
-	println!("1");
-	interpret_program(&mut program, "");
-	interpret_program(&mut program, "init");
     let mut copy = String::new();
     let mut current_frame = 0;
     let mut console = Console { open: false, just_opened: false, console_text: String::new(), console_log: vec![], console_history: vec![], index: 0 };
     loop {
-        let mut nextchar = get_char_pressed();
-        while nextchar.is_some() {
-            //println!("{}", nextchar.unwrap() as u32);
-            //24=ctrlx,3=ctrlc,22=ctrlv,8=bckspc,13=enter,27=escape
-            if let Some(char) = nextchar {
-                if console.open {
-                    console_input(char, &mut console);
-                }
+        for program in &mut programs {
+            program.current_frame = current_frame;
+            if !program.initialized {
+                interpret_program(program, "");
+                interpret_program(program, "init");
+                program.initialized = true;
             }
-            nextchar = get_char_pressed();
+        }
+        if is_key_pressed(KeyCode::Enter) {
+            if console.open {
+                console_submit(&mut console, &mut programs);
+            }
         }
 
-	    interpret_program(&mut program, "step");
+        for program in &mut programs {
+	        interpret_program(program, "step");
+        }
 
-	    interpret_program(&mut program, "draw");
+        for program in &mut programs {
+	        interpret_program(program, "draw");
+        }
 
-        console_step(&mut console, &mut program);
+        for program in &mut programs {
+            console_log(&mut console, program);
+        }
+        
+        console_step(&mut console);
 
         current_frame += 1;
         next_frame().await;

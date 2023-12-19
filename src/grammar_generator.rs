@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::datatypes::GrammarToken;
 
 //A Converter from an input CFG to what the Top-Down Parser needs.
-//Predictive grammar is not needed, as the generator handles that case.
+//Predictive grammar is not needed (at least, hopefully eventually), as the generator handles that case.
 //TODO:
 //		Make check and fix for left recursion (similar to how it fixes non-predictive grammars)
 //		Make optional tokens/linked optional tokens (signified with (x) beforehand, with x being a tag)
