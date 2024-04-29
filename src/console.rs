@@ -27,9 +27,15 @@ pub fn console_submit(console: &mut Console, programs: &mut Vec<Program>){
     //look, my muscle memory from NTT isn't going away anytime soon, I might as well accept it.
     if let Some(captures) = Regex::new(r"/(gel|run|gml) (.*)").unwrap().captures(&console.console_text) {
         let mut command_program = compile(captures.get(2).unwrap().as_str().to_owned());
-        interpret_program(&mut command_program, "");
-        for message in &command_program.log {
-            console.console_log.push((message.to_owned(), 600));
+        match interpret_program(&mut command_program, "") {
+            Err(msg) => {
+                console.console_log.push((format!("Error: {}", msg.to_string()), 600));
+            }
+            _ => {
+                for message in &command_program.log {
+                    console.console_log.push((message.to_owned(), 600));
+                }
+            }
         }
     }
     else if let Some(captures) = Regex::new(r"/(load) (.*)").unwrap().captures(&console.console_text) {

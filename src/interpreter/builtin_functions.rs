@@ -11,6 +11,7 @@ struct Function {
     args: &'static [FunctionArg]
 }
 
+#[derive(Clone)]
 struct FunctionArg {
     name: &'static str,
     typ: &'static str
@@ -28,77 +29,86 @@ const FUNCTION_LIST: &'static [Function] = &[
     Function{name: "draw_sprite", desc: "Draws the sprite named {sprite name} to the screen at {x}, {y}, blended with color {color}", args: &[FunctionArg{name: "sprite name", typ: "sprite name (string)"}, FunctionArg{name: "x", typ: "number"}, FunctionArg{name: "y", typ: "number"}, FunctionArg{name: "color", typ: "color"}]},
 ];
 
-pub fn run_builtin(name: &str, args: Vec<Data>, registers: &HashMap<u32, Data>, variables: &HashMap<String, (Data, Data)>, program: &mut Program) -> Option<Data> {
+pub fn builtin_functions() -> HashMap<String, (Data, Data)> {
+    let mut funcs = HashMap::new();
+    for func in FUNCTION_LIST {
+        let funcargs = Box::new(func.args.iter().map(|arg| Data::Type(arg.typ.to_string())).collect());
+        funcs.insert(func.name.to_owned(), (Data::Type("Function".to_string()), Data::Function(func.name.to_owned(), funcargs)));
+    }
+    return funcs;
+}
+
+pub fn run_builtin(name: &str, args: Vec<Data>, registers: &HashMap<u32, Data>, variables: &HashMap<String, (Data, Data)>, program: &mut Program) -> Result<Option<Data>, String> {
     match name {
         "print" | "trace" => {
             for arg in args {
-                println!("{}", get_value(&arg, &registers, &variables).to_string());
-                program.log.push(get_value(&arg, &registers, &variables).to_string());
+                println!("{}", get_value(&arg, &registers, &variables)?.to_string());
+                program.log.push(get_value(&arg, &registers, &variables)?.to_string());
             }
-            return Some(Data::Null);
+            return Ok(Some(Data::Null));
         }
         "regex" => {
             if let [Data::String(arg), Data::String(arg2)] = &args[..] {
-                return Some(Data::Int(Regex::new(&arg).unwrap().is_match(&arg2) as i32));
+                return Ok(Some(Data::Int(Regex::new(&arg).unwrap().is_match(&arg2) as i32)));
             } else {
                 builtin_error(name, args);
-                return Some(Data::Null);
+                return Ok(Some(Data::Null));
             }
         }
         "clear_background" => {
             if let [Data::Color(r,g,b,a)] = &args[..] {
                 clear_background(Color::new(r.to_f32().unwrap(), g.to_f32().unwrap(), b.to_f32().unwrap(), a.to_f32().unwrap()));
-                return Some(Data::Null);
+                return Ok(Some(Data::Null));
             } else {
                 builtin_error(name, args);
-                return Some(Data::Null);
+                return Ok(Some(Data::Null));
             }
         }
         "draw_text" => {
             if let [Data::String(str), Data::Decimal(x), Data::Decimal(y), Data::Decimal(fntsz), Data::Color(r,g,b,a)] = &args[..] {
                 draw_text(str.as_str(), x.to_f32().unwrap(), y.to_f32().unwrap(), fntsz.to_f32().unwrap(), Color::new(r.to_f32().unwrap(), g.to_f32().unwrap(), b.to_f32().unwrap(), a.to_f32().unwrap()));
-                return Some(Data::Null);
+                return Ok(Some(Data::Null));
             } else {
                 builtin_error(name, args);
-                return Some(Data::Null);
+                return Ok(Some(Data::Null));
             }
         }
         "object_create" => {
             if let [Data::String(object_type)] = &args[..] {
-                return Some(Data::Object(program.new_object(object_type.to_owned())));
+                return Ok(Some(Data::Object(program.new_object(object_type.to_owned()))));
             } else {
                 builtin_error(name, args);
-                return Some(Data::Null);
+                return Ok(Some(Data::Null));
             }
         }
         //TODO: make sprite loading nonsync?
         "add_sprite" => {
             if let [Data::String(path), Data::String(name)] = &args[..] {
-                return Some(Data::String(SpriteData::new(path.to_owned(), name.to_owned(), program)));
+                return Ok(Some(Data::String(SpriteData::new(path.to_owned(), name.to_owned(), program))));
             } else {
                 builtin_error(name, args);
-                return Some(Data::Null);
+                return Ok(Some(Data::Null));
             }
         }
         "draw_sprite" => {
             if let [Data::String(spr_name), Data::Decimal(x), Data::Decimal(y), Data::Color(r,g,b,a)] = &args[..] {
                 draw_texture(&program.sprites[spr_name].texture, x.to_f32().unwrap(), y.to_f32().unwrap(), Color::new(r.to_f32().unwrap(), g.to_f32().unwrap(), b.to_f32().unwrap(), a.to_f32().unwrap()));
-                return Some(Data::Null);
+                return Ok(Some(Data::Null));
             } else {
                 builtin_error(name, args);
-                return Some(Data::Null);
+                return Ok(Some(Data::Null));
             }
         }
         "mouse_position_x" => {
             let mouse_pos = mouse_position();
-            return Some(Data::Decimal(Decimal::from_f32(mouse_pos.0).unwrap()));
+            return Ok(Some(Data::Decimal(Decimal::from_f32(mouse_pos.0).unwrap())));
         }
         "mouse_position_y" => {
             let mouse_pos = mouse_position();
-            return Some(Data::Decimal(Decimal::from_f32(mouse_pos.1).unwrap()));
+            return Ok(Some(Data::Decimal(Decimal::from_f32(mouse_pos.1).unwrap())));
         }
         _ => {
-            return None;
+            return Ok(None);
         }
     }
 }

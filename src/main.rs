@@ -68,18 +68,18 @@ async fn main() {
         for program in &mut programs {
             program.current_frame = current_frame;
             if !program.initialized {
-                interpret_program(program, "");
-                interpret_program(program, "init");
+                if let Err(err) = interpret_program(program, "") {console.console_log.push((format!("Error: {}", err), 600));}
+                if let Err(err) = interpret_program(program, "init") {console.console_log.push((format!("Error: {}", err), 600));}
                 program.initialized = true;
             }
         }
 
         for program in &mut programs {
-	        interpret_program(program, "step");
+	        if let Err(err) = interpret_program(program, "step") {console.console_log.push((format!("Error: {}", err), 600));}
         }
 
         for program in &mut programs {
-	        interpret_program(program, "draw");
+	        if let Err(err) = interpret_program(program, "draw") {console.console_log.push((format!("Error: {}", err), 600));}
         }
 
         for program in &mut programs {

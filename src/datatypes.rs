@@ -62,6 +62,7 @@ pub enum Data {
     Type(String),
     Object(usize),
     Comma(Box<Data>, Box<Data>),
+	Function(String, Box<Vec<Data>>),
 }
 impl fmt::Display for Data {
     // This trait requires `fmt` with this exact signature.
@@ -103,6 +104,9 @@ impl fmt::Display for Data {
 			}
 			Data::Comma(data1, data2) => {
 				write!(f, "{}, {}", data1.to_string(), data2.to_string())
+			}
+			Data::Function(data1, data2) => {
+				write!(f, "{}({:?})", data1, data2)
 			}
 		}
     }

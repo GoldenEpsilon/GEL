@@ -5,23 +5,26 @@ use std::vec;
 use crate::interpreter::unwrap_values::*;
 use crate::interpreter::operators::data_operation;
 use crate::interpreter::builtin_variables::builtin_variables;
+use crate::interpreter::builtin_functions::builtin_functions;
 use crate::interpreter::builtin_functions::run_builtin;
 use crate::datatypes::*;
 use macroquad::prelude::*;
 use rust_decimal::prelude::*;
 
-pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Data{
+pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Result<Data, String>{
 	let opcodes;
 	{
 		let function = program.functions.get(startingfunction);
 		if function.is_none() {
-			return Data::Null;
+			return Ok(Data::Null);
 		}
 		opcodes = function.unwrap().1.to_owned();
 	}
+	
 	let mut registers: HashMap<u32, Data> = HashMap::new();
 	//let mut labels: HashMap<Data, u32> = HashMap::new();
 	let mut variables: HashMap<String, (Data, Data)> = builtin_variables();
+	variables.extend(builtin_functions());
 	//let mut functions: HashMap<Data, (u32, Vec<(Data, Data)>)> = HashMap::new();
 	let mut jump_point;
 	let mut func_stack: Vec<u32> = vec![];
@@ -85,11 +88,11 @@ pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Data{
 					registers.insert(op.register, Data::Comma(Box::new(op.data.clone()), Box::new(op.data2.clone())));
 				}
 				"FUNC" => {
-					if let Data::Variable(func) = get_value(&op.data, &registers, &variables){
-						let data = run_builtin(func.as_str(), unwrap_function_inputs(&op.data2, &registers, &variables), &registers, &variables, program);
+					if let Data::Function(func, args) = get_value(&op.data, &registers, &variables)?{
+						let data = run_builtin(func.as_str(), unwrap_function_inputs(&op.data2, &registers, &variables)?, &registers, &variables, program)?;
 						if data.is_none() {
 							if program.functions.contains_key(&func) {
-								registers.insert(op.register, interpret_program(program, &func));
+								registers.insert(op.register, interpret_program(program, &func)?);
 							}else{
 								panic!("ERROR: FUNCTION {} DOES NOT EXIST ON LINE {}", func, op.line);
 							}
@@ -112,14 +115,14 @@ pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Data{
 					}
 				}
 				"PLUS" | "MINUS" | "MULT" | "DIV" | "EXP" | "GT" | "LT" | "EQ" | "AND" | "OR" | "DOT" => {
-					let left = get_value(&op.data, &registers, &variables);
-					let right = get_value(&op.data2, &registers, &variables);
+					let left = get_value(&op.data, &registers, &variables)?;
+					let right = get_value(&op.data2, &registers, &variables)?;
 					registers.insert(op.register, data_operation(left, right, op.instruction.clone()));
 					//println!("{:?}", registers.get(&Data::Register(op.register)));
 				}
 				"INCR" => {
 					if let Data::Variable(data) = &op.data {
-						variables.get_mut(data).unwrap().1 = data_operation(get_value(&op.data, &registers, &variables), Data::Null, op.instruction.clone());
+						variables.get_mut(data).unwrap().1 = data_operation(get_value(&op.data, &registers, &variables)?, Data::Null, op.instruction.clone());
 					}
 				}
 				"IF_GOTO" => {
@@ -129,7 +132,7 @@ pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Data{
 					//println!("if: {}, {}", position, jump_point);
 				}
 				"FOR_GOTO" => {
-					match get_value(&op.data, &registers, &variables) {
+					match get_value(&op.data, &registers, &variables)? {
 						Data::Null => {}
 						Data::Int(i) if i == 0 => {}
 						_ => {
@@ -140,7 +143,7 @@ pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Data{
 					}
 				}
 				"ELSE_GOTO" => {
-					match get_value(&op.data, &registers, &variables) {
+					match get_value(&op.data, &registers, &variables)? {
 						Data::Null => {
 							if let Data::Label(label) = op.data2 {
 								jump_point = program.labels[label];
@@ -165,7 +168,7 @@ pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Data{
 			_position += 1;
 		}
 	}
-	return Data::Null;
+	return Ok(Data::Null);
 	//println!("{}{:#?}", "Registers: ", registers);
 	//println!("{}{:#?}", "Variables: ", variables);
 }
