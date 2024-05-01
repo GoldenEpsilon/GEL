@@ -97,3 +97,25 @@ async fn main() {
         copy = "".to_owned();
     }
 }
+
+#[test]
+fn unittest1(){
+    let mut program = compile_file("test_files/unittest1.gel");
+    println!("{:#?}", program);
+    if let Err(err) = interpret_program(&mut program, "init") {println!("{}", format!("Error: {}", err));}
+    for message in &program.log {
+        println!("{}", message.to_owned());
+    }
+    assert!(program.log == vec!["1: this should print", "3: this should print"])
+}
+
+#[test]
+fn unittest2(){
+    let mut program = compile_file("test_files/unittest2.gel");
+    println!("{:#?}", program);
+    if let Err(err) = interpret_program(&mut program, "init") {println!("{}", format!("Error: {}", err));}
+    for message in &program.log {
+        println!("{}", message.to_owned());
+    }
+    assert!(program.log == vec!["1", "0"])
+}

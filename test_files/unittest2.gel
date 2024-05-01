@@ -1,0 +1,8 @@
+#define init{
+	print(test_function(true))
+	print(test_function(false))
+}
+
+#define test_function(a)
+	if(a) return 1
+	else return 0

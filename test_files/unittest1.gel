@@ -1,0 +1,8 @@
+#define init{
+	if(true)
+		print("1: this should print");
+	if(false)
+		print("2: this should NOT print");
+	if(true)
+		print("3: this should print");
+}

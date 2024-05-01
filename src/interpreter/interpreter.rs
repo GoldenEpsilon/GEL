@@ -1,5 +1,4 @@
 
-use regex::Regex;
 use std::collections::HashMap;
 use std::vec;
 use crate::interpreter::unwrap_values::*;
@@ -88,7 +87,7 @@ pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Resul
 					registers.insert(op.register, Data::Comma(Box::new(op.data.clone()), Box::new(op.data2.clone())));
 				}
 				"FUNC" => {
-					if let Data::Function(func, args) = get_value(&op.data, &registers, &variables)?{
+					if let Data::Function(func, _args) = get_value(&op.data, &registers, &variables)?{
 						let data = run_builtin(func.as_str(), unwrap_function_inputs(&op.data2, &registers, &variables)?, &registers, &variables, program)?;
 						if data.is_none() {
 							if program.functions.contains_key(&func) {
@@ -117,32 +116,15 @@ pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Resul
 				"PLUS" | "MINUS" | "MULT" | "DIV" | "EXP" | "GT" | "LT" | "EQ" | "AND" | "OR" | "DOT" => {
 					let left = get_value(&op.data, &registers, &variables)?;
 					let right = get_value(&op.data2, &registers, &variables)?;
-					registers.insert(op.register, data_operation(left, right, op.instruction.clone()));
+					registers.insert(op.register, data_operation(left, right, op.instruction.clone())?);
 					//println!("{:?}", registers.get(&Data::Register(op.register)));
 				}
 				"INCR" => {
 					if let Data::Variable(data) = &op.data {
-						variables.get_mut(data).unwrap().1 = data_operation(get_value(&op.data, &registers, &variables)?, Data::Null, op.instruction.clone());
+						variables.get_mut(data).unwrap().1 = data_operation(get_value(&op.data, &registers, &variables)?, Data::Null, op.instruction.clone())?;
 					}
 				}
-				"IF_GOTO" => {
-					if let Data::Label(label) = op.data2 {
-						jump_point = program.labels[label];
-					}
-					//println!("if: {}, {}", position, jump_point);
-				}
-				"FOR_GOTO" => {
-					match get_value(&op.data, &registers, &variables)? {
-						Data::Null => {}
-						Data::Int(i) if i == 0 => {}
-						_ => {
-							if let Data::Label(label) = op.data2 {
-								jump_point = program.labels[label];
-							}
-						}
-					}
-				}
-				"ELSE_GOTO" => {
+				"CHECK_IF_NOT" => {
 					match get_value(&op.data, &registers, &variables)? {
 						Data::Null => {
 							if let Data::Label(label) = op.data2 {
@@ -154,9 +136,45 @@ pub fn interpret_program(program: &mut Program, startingfunction: &str) -> Resul
 								jump_point = program.labels[label];
 							}
 						}
+						Data::Decimal(i) if i == Decimal::from(0) => {
+							if let Data::Label(label) = op.data2 {
+								jump_point = program.labels[label];
+							}
+						}
+						_ => {}
+					}
+				}
+				"CHECK_ELSE_NOT" => {
+					match get_value(&op.data, &registers, &variables)? {
+						Data::Null => {
+							if let Data::Label(label) = op.data2 {
+								jump_point = program.labels[label];
+							}
+						}
+						Data::Int(i) if i == 0 => {
+							if let Data::Label(label) = op.data2 {
+								jump_point = program.labels[label];
+							}
+						}
+						Data::Decimal(i) if i == Decimal::from(0) => {
+							if let Data::Label(label) = op.data2 {
+								jump_point = program.labels[label];
+							}
+						}
 						_ => {}
 					}
 					//println!("else: {}, {}", position, jump_point);
+				}
+				"FOR_GOTO" => {
+					match get_value(&op.data, &registers, &variables)? {
+						Data::Null => {}
+						Data::Int(i) if i == 0 => {}
+						_ => {
+							if let Data::Label(label) = op.data2 {
+								jump_point = program.labels[label];
+							}
+						}
+					}
 				}
 				opcode => {
 					println!("UNKNOWN OPCODE ON LINE {}. OPCODE IS {}", op.line, opcode);

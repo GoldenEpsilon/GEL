@@ -1,7 +1,9 @@
+use fehler::{throw, throws};
 use rust_decimal::{Decimal, prelude::{ToPrimitive, FromPrimitive}, MathematicalOps};
 use rust_decimal_macros::dec;
 use crate::datatypes::Data;
 
+#[throws(String)]
 pub fn data_operation(left: Data, right: Data, op: String) -> Data {
 	match (left, right, op.as_str()) {
 		(Data::Int(l), Data::Int(r), "PLUS") => {
@@ -52,7 +54,15 @@ pub fn data_operation(left: Data, right: Data, op: String) -> Data {
 			return Data::Decimal(l / r);
 		}
 		(Data::Decimal(l), Data::Decimal(r), "EXP") => {
-			return Data::Decimal(l.powf(r.to_f64().unwrap()));
+			if let Some(r) = r.to_f64() {
+				if let Some(ret) = l.checked_powf(r) {
+					return Data::Decimal(ret);
+				}else {
+					throw!("Exponent overflow");
+				}
+			}else{
+				throw!("RHS decimal could not be converted to a f64")
+			}
 		}
 		(Data::Decimal(l), Data::Decimal(r), "GT") => {
 			return Data::Decimal(Decimal::from_i8((l > r) as i8).unwrap());

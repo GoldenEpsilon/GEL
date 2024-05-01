@@ -45,25 +45,25 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut u32, curr_pos: usize, program
 			ret_val.append(&mut linearize(&mut ast.children[1], curr_reg, curr_pos + ret_val.len(), program));
 			
 			//goto label if false
-			let elselabel = program.labels.len();
-			ret_val.push(Opcode{instruction: "ELSE_GOTO".to_string(), data: Data::Register(ret_val.last().unwrap().register), data2: Data::Label(elselabel), register: 0, line: 0});
+			let iffalselabel = program.labels.len();
+			ret_val.push(Opcode{instruction: "CHECK_IF_NOT".to_string(), data: Data::Register(ret_val.last().unwrap().register), data2: Data::Label(iffalselabel), register: 0, line: 0});
 			program.labels.push(0);
 			
 			ret_val.append(&mut linearize(&mut ast.children[2], curr_reg, curr_pos + ret_val.len(), program));
 			
 			//goto label
-			let iflabel = program.labels.len();
-			ret_val.push(Opcode{instruction: "IF_GOTO".to_string(), data: Data::Null, data2: Data::Label(iflabel), register: 0, line: 0});
+			let iftruelabel = program.labels.len();
+			ret_val.push(Opcode{instruction: "CHECK_ELSE_NOT".to_string(), data: Data::Null, data2: Data::Label(iftruelabel), register: 0, line: 0});
 			program.labels.push(0);
 			
 			//label to goto
-			program.labels[elselabel] = curr_pos.to_owned() + ret_val.len();
+			program.labels[iffalselabel] = curr_pos.to_owned() + ret_val.len();
 			//ret_val.push(Opcode{instruction: "ELSE_LABEL".to_string(), data: Data::Label(else_label_reg), data2: Data::Null, register: 0, line: 0});
 			
 			ret_val.append(&mut linearize(&mut ast.children[3], curr_reg, curr_pos + ret_val.len(), program));
 			
 			//label to goto
-			program.labels[iflabel] = curr_pos.to_owned() + ret_val.len();
+			program.labels[iftruelabel] = curr_pos.to_owned() + ret_val.len();
 			//ret_val.push(Opcode{instruction: "IF_LABEL".to_string(), data: Data::Label(if_label_reg), data2: Data::Null, register: 0, line: 0});
 		}
 		"Else" => {
@@ -213,7 +213,9 @@ pub fn linearize(ast: &mut ASTNode, curr_reg: &mut u32, curr_pos: usize, program
 			}
 		}
 		"INT" => {
-			ret_val.push(Opcode{instruction: "Value".to_string(), data: Data::Int(ast.data.as_ref().unwrap().1.parse::<i32>().unwrap()), data2: Data::Null, register: *curr_reg, line: 0});
+			//OVERRIDES TO USE DECIMAL BY DEFAULT
+			//ret_val.push(Opcode{instruction: "Value".to_string(), data: Data::Int(ast.data.as_ref().unwrap().1.parse::<i32>().unwrap()), data2: Data::Null, register: *curr_reg, line: 0});
+			ret_val.push(Opcode{instruction: "Value".to_string(), data: Data::Decimal(Decimal::from_str(ast.data.as_ref().unwrap().1.as_str()).unwrap()), data2: Data::Null, register: *curr_reg, line: 0});
 			*curr_reg += 1;
 		}
 		"STRING" => {

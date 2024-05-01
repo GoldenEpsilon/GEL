@@ -16,8 +16,8 @@ use crate::optimizers::ast_optimizer::optimize_ast;
 //Make function definitions work without {} (if there isn't an lbrace, break on next function definition)
 static GEL_GRAMMAR: Lazy<HashMap<String, Vec<Vec<GrammarToken>>>> = Lazy::new(|| grammar_generator(String::from("
 	Root::= Block
-	Block::= Stat Block | NONE
-	Stat::= LBRACE Block RBRACE | COLON PythonBlock | Def Semi | Stat2 Semi | If | For | FuncDef Semi | SET Expr
+	Block::= Stat Block | FuncDef | NONE
+	Stat::= LBRACE Block RBRACE | COLON PythonBlock | Def Semi | Stat2 Semi | If | For | SET Expr
 	PythonBlock::= INDENT Block DEDENT | Stat
 	Stat2::= ID DOT Stat2 | ID AsgnOp | ID Func
 	Semi::= SEMI | NONE
@@ -26,7 +26,7 @@ static GEL_GRAMMAR: Lazy<HashMap<String, Vec<Vec<GrammarToken>>>> = Lazy::new(||
 	Set::= SET | SETADD | SETSUB | SETMUL | SETDIV
 	Func::= LPAREN Comma RPAREN
 	Comma::= Expr Comma | COMMA Expr Comma | NONE
-	FuncDef::= FUNCDEF ID FuncDefArgs FuncDefType Stat
+	FuncDef::= FUNCDEF ID FuncDefArgs FuncDefType Block
 	FuncDefArgs::= LPAREN DefComma RPAREN | NONE
 	FuncDefType::= ARROW TYPE | NONE
 	DefComma::= Arg DefComma | COMMA Arg DefComma | NONE

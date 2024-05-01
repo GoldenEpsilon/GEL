@@ -42,7 +42,7 @@ pub fn run_builtin(name: &str, args: Vec<Data>, registers: &HashMap<u32, Data>, 
     match name {
         "print" | "trace" => {
             for arg in args {
-                println!("{}", get_value(&arg, &registers, &variables)?.to_string());
+                //println!("{}", get_value(&arg, &registers, &variables)?.to_string());
                 program.log.push(get_value(&arg, &registers, &variables)?.to_string());
             }
             return Ok(Some(Data::Null));
